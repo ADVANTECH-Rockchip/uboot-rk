@@ -1,0 +1,23 @@
+if ROCKCHIP_ARCH32
+
+config ARCH_ADVANTECH
+	bool "Support Advantech platform"
+
+if ARCH_ADVANTECH
+
+config SYS_BOARD
+	default "advantech"
+
+config SYS_VENDOR
+	default "rockchip"
+
+if PLAT_RSB4680A1_2G
+
+config SYS_CONFIG_NAME
+	default "rk3288_rsb4680"
+
+endif
+
+endif
+
+endif

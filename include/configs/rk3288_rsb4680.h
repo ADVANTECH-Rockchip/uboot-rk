@@ -7,8 +7,8 @@
  * SPDX-License-Identifier:	GPL-2.0+
  */
 
-#ifndef __RK32PLAT_CONFIG_H
-#define __RK32PLAT_CONFIG_H
+#ifndef __RK3288_RSB4680_CONFIG_H
+#define __RK3288_RSB4680_CONFIG_H
 
 /*
  * uboot ram config.
@@ -30,6 +30,7 @@
  */
 #define CONFIG_SYS_TEXT_BASE    	0x00000000
 
+#define CONFIG_BOARD_EARLY_INIT_F
 
 /*
  * rk plat default configs.
@@ -49,6 +50,21 @@
 
 /* mod it to enable console commands.	*/
 #define CONFIG_BOOTDELAY		3
+
+/* switch debug port to normal uart */
+/*
+#define CONFIG_SWITCH_DEBUG_PORT_TO_UART
+#define CONFIG_SILENT_CONSOLE
+*/
+#define DEBUG_SWITCH_GPIO	(GPIO_BANK2 | GPIO_A0)
+
+/* HW board ID */
+#define CONFIG_DISPLAY_BOARD_ID
+#ifdef CONFIG_DISPLAY_BOARD_ID
+#define HW_BOARD_ID0	(GPIO_BANK0 | GPIO_B1)
+#define HW_BOARD_ID1	(GPIO_BANK0 | GPIO_B0)
+#define HW_BOARD_ID2	(GPIO_BANK0 | GPIO_A7)
+#endif
 
 /* efuse version */
 #ifdef CONFIG_RK_EFUSE
@@ -82,7 +98,7 @@
 
 #define CONFIG_USBD_PRODUCTID_FASTBOOT	0x0006
 #define CONFIG_USBD_MANUFACTURER	"Rockchip"
-#define CONFIG_USBD_PRODUCT_NAME	"rk30xx"
+#define CONFIG_USBD_PRODUCT_NAME	"rk32xx"
 
 #define FASTBOOT_PRODUCT_NAME		"fastboot" /* Fastboot product name */
 
@@ -141,6 +157,8 @@
 #define CONFIG_PARTITIONS
 #endif /* CONFIG_RK_UMS_BOOT_EN */
 
+/* memery test cmd */
+#define CONFIG_CMD_MEMORY
 
 /* more config for display */
 #ifdef CONFIG_LCD
@@ -170,6 +188,12 @@
 #undef CONFIG_UBOOT_CHARGE
 
 #endif /* CONFIG_LCD */
+
+#define CONFIG_CMD_PING
+#define CONFIG_CMD_DHCP
+#define CONFIG_CMD_MII
+#define CONFIG_MII
+#define CONFIG_PHYLIB
 
 
 /* more config for charge */
@@ -203,15 +227,12 @@
 /******** pmic driver ********/
 #ifdef CONFIG_POWER_PMIC
 #undef CONFIG_POWER_RK_SAMPLE
-#define CONFIG_POWER_RICOH619
 #define CONFIG_POWER_RK808
-#define CONFIG_POWER_RK818
-#define CONFIG_POWER_ACT8846
 #endif /* CONFIG_POWER_PMIC */
 
 /******** charger driver ********/
 #ifdef CONFIG_POWER_FG
-#define CONFIG_POWER_FG_CW201X
+#undef CONFIG_POWER_FG_CW201X
 #endif /* CONFIG_POWER_FG */
 
 /******** battery driver ********/
@@ -223,4 +244,4 @@
 
 #endif /* CONFIG_RK_POWER */
 
-#endif /* __RK32PLAT_CONFIG_H */
+#endif /* __RK3288_RSB4680_CONFIG_H */
