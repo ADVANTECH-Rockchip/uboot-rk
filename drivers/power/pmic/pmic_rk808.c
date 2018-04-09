@@ -161,7 +161,7 @@ int charger_init(unsigned char bus)
 {
     int usb_charger_type = dwc_otg_check_dpdm();
 
-    debug("%s, charger_type = %d, dc_is_charging= %d\n",__func__,usb_charger_type,is_charging());
+    printf("%s, charger_type = %d, dc_is_charging= %d\n",__func__,usb_charger_type,is_charging());
     if(1){
         pmic_rk808_charger_setting(3);
     }else if(usb_charger_type){

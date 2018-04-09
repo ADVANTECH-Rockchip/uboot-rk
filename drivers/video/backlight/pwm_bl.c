@@ -95,12 +95,12 @@ static int rk_bl_parse_dt(const void *blob)
 	bl.node = fdt_node_offset_by_compatible(blob,
 					0, COMPAT_ROCKCHIP_BL);
 	if (bl.node < 0) {
-		debug("can't find dts node for backlight\n");
+		printf("can't find dts node for backlight\n");
 		bl.status = 0;
 		return -ENODEV;
 	}
 	if (!fdt_device_is_available(blob, bl.node)) {
-		debug("device backlight is disabled\n");
+		printf("device backlight is disabled\n");
 		bl.status = 0;
 		return -EPERM;
 	}
@@ -108,12 +108,16 @@ static int rk_bl_parse_dt(const void *blob)
 	bl.bl_en.flags = !(bl.bl_en.flags  & OF_GPIO_ACTIVE_LOW);
 	if (fdtdec_get_int_array(blob, bl.node, "pwms", data,
 			ARRAY_SIZE(data))) {
-		debug("Cannot decode PWM property pwms\n");
+		printf("Cannot decode PWM property pwms\n");
 		bl.status = 0;
 		return -ENODEV;
 	}
 
+#ifdef CONFIG_ARCH_ADVANTECH
+	bl.id = fdtdec_get_int(blob, bl.node, "rockchip,pwm_id", 0);
+#else
 	bl.id = data[1];
+#endif
 	bl.period = data[2];
 	pwm_node = fdt_node_offset_by_phandle(blob, data[0]);
 #ifdef CONFIG_ROCKCHIP_ARCH64
@@ -169,6 +173,7 @@ int rk_pwm_bl_config(int brightness)
 	if (!bl.status)
 		return -EPERM;
 
+	rk_iomux_config(RK_PWM0_IOMUX+bl.id);
 	if (brightness == 0)
 		gpio_set_value(bl.bl_en.gpio, !(bl.bl_en.flags));
 	else

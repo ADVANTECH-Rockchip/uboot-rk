@@ -26,6 +26,7 @@
 #include "gm7122_tve.h"
 #endif
 
+#include "../../board/rockchip/common/config.h"
 
 DECLARE_GLOBAL_DATA_PTR;
 
@@ -272,6 +273,18 @@ int rk_fb_pwr_disable(struct rockchip_fb *fb)
 	return 0;
 }
 
+#ifdef CONFIG_ARCH_ADVANTECH
+#define is_digit(c) ((c) >= '0' && (c) <= '9')
+static int atoi(const char *s)
+{
+	int i = 0;
+	int index = 0;
+	while (is_digit(s[index]))
+		i = i * 10 + s[index++] - '0';
+
+	return i;
+}
+#endif
 
 int rk_fb_parse_dt(struct rockchip_fb *rk_fb, const void *blob)
 {
@@ -303,8 +316,59 @@ int rk_fb_parse_dt(struct rockchip_fb *rk_fb, const void *blob)
 		printf("rk fb dt: can't find node '/display-timings'\n");
 		return -ENODEV;
 	}
-	phandle = fdt_getprop_u32_default_node(blob, node, 0, "native-mode", -1);
-	node = fdt_node_offset_by_phandle_node(blob, node, phandle);
+#ifdef CONFIG_ARCH_ADVANTECH
+	int x=0,y=0,screen_type=SCREEN_NULL;
+	int use_native_mode=1;
+	char *s,*p,*t;
+	int node1=node;
+
+	s = getenv("display_mode");
+	if(s){
+		if (!memcmp(s,"edp_",4)) {
+			screen_type = SCREEN_EDP;
+		} else if (!memcmp(s,"lvds_",5)) {
+			screen_type = SCREEN_LVDS;
+		} else if (!memcmp(s,"dual_lvds_",10)) {
+			screen_type = SCREEN_DUAL_LVDS;
+		} else if (!memcmp(s,"dual_lcd",8)) {
+			screen_type = SCREEN_LVDS;
+			s = getenv("dual_lcd_screen0");
+			if(memcmp(s,"lvds_",5)){
+				s = getenv("dual_lcd_screen1");
+			}
+		}
+		if(SCREEN_NULL != screen_type) {
+			p = strrchr(s,'_');
+			if(p) {
+				x=atoi(p+1);
+			}
+			t = strrchr(s,'x');
+			if(t) {
+				y=atoi(t+1);
+			}
+		}
+		if((x>0) && (y>0) && (screen_type>0)) {
+			for (node1 = fdt_first_subnode(blob,node1);
+				node1 >= 0;
+				node1 = fdt_next_subnode(blob, node1)) {
+				if((x == fdtdec_get_int(blob, node1, "hactive", 0)) && 
+				   (y == fdtdec_get_int(blob, node1, "vactive", 0)) && 
+				   (screen_type == fdtdec_get_int(blob, node1, "screen-type", -1))) {
+				   use_native_mode = 0;
+				   node = node1;
+				   break;
+				}
+			}
+		}
+	}
+	if (use_native_mode) {
+#endif
+		printf("environment has no valid display_mode,so use native-mode from dts\n");
+		phandle = fdt_getprop_u32_default_node(blob, node, 0, "native-mode", -1);
+		node = fdt_node_offset_by_phandle_node(blob, node, phandle);
+#ifdef CONFIG_ARCH_ADVANTECH
+	}
+#endif
 #endif
 	if (node <= 0) {
 		printf("rk fb dt: can't get device node for display-timings\n");
@@ -318,19 +382,19 @@ int rk_fb_parse_dt(struct rockchip_fb *rk_fb, const void *blob)
 	panel_info.color_mode = fdtdec_get_int(blob, node, "color-mode", 0);
 	panel_info.lcd_face = fdtdec_get_int(blob, node, "out-face", -1);
 	if (panel_info.lcd_face == (uchar)-1) {
-		debug("Can't get out-face set to OUT_D888_P666 for default\n");
+		printf("Can't get out-face set to OUT_D888_P666 for default\n");
 		panel_info.lcd_face = OUT_D888_P666;
 	}
 
 	panel_info.vl_col = fdtdec_get_int(blob, node, "hactive", 0);
 	if (panel_info.vl_col == 0) {
-		debug("Can't get hactive set to 1280 for default\n");
+		printf("Can't get hactive set to 1280 for default\n");
 		panel_info.vl_col = 1280;
 	}
 
 	panel_info.vl_row = fdtdec_get_int(blob, node, "vactive", 0);
 	if (panel_info.vl_row == 0) {
-		debug("Can't get vactive set to 800 for default\n");
+		printf("Can't get vactive set to 800 for default\n");
 		panel_info.vl_row = 800;
 	}
 
@@ -340,73 +404,73 @@ int rk_fb_parse_dt(struct rockchip_fb *rk_fb, const void *blob)
 
 	panel_info.vl_freq = fdtdec_get_int(blob, node, "clock-frequency", 0);
 	if (panel_info.vl_freq == 0) {
-		debug("Can't get clock-frequency set to 71Mhz for default\n");
+		printf("Can't get clock-frequency set to 71Mhz for default\n");
 		panel_info.vl_freq = 71000000;
 	}
 
 	panel_info.vl_oep = fdtdec_get_int(blob, node, "de-active", -1);
 	if (panel_info.vl_oep == (u_char)-1) {
-		debug("Can't get de-active set to 0 for default\n");
+		printf("Can't get de-active set to 0 for default\n");
 		panel_info.vl_oep = 0;
 	}
 
 	panel_info.vl_hsp = fdtdec_get_int(blob, node, "hsync-active", -1);
 	if (panel_info.vl_hsp == (u_char)-1) {
-		debug("Can't get hsync-active, set to 0 for default\n");
+		printf("Can't get hsync-active, set to 0 for default\n");
 		panel_info.vl_hsp = 0;
 	}
 
 	panel_info.vl_vsp = fdtdec_get_int(blob, node, "vsync-active", -1);
 	if (panel_info.vl_vsp == (u_char)-1) {
-		debug("Can't get vsync-active, set to 0 for default\n");
+		printf("Can't get vsync-active, set to 0 for default\n");
 		panel_info.vl_vsp = 0;
 	}
 
 	panel_info.lvds_format = fdtdec_get_int(blob, node, "lvds-format", -1);
 	if (panel_info.lvds_format == (u_char)-1) {
-		debug("Can't get lvds-format, set to LVDS_8BIT_2\n");
+		printf("Can't get lvds-format, set to LVDS_8BIT_2\n");
 		panel_info.lvds_format = LVDS_8BIT_2;
 	}
 
 	panel_info.vl_swap_rb = fdtdec_get_int(blob, node, "swap-rb", -1);
 	if (panel_info.vl_swap_rb == (u_char)-1) {
-		debug("Can't get swap-rb, set to 0 for default\n");
+		printf("Can't get swap-rb, set to 0 for default\n");
 		panel_info.vl_swap_rb = 0;
 	}
 
 	panel_info.vl_hspw = fdtdec_get_int(blob, node, "hsync-len", 0);
 	if (panel_info.vl_hspw == 0) {
-		debug("Can't get hsync-len, use 10 to default\n");
+		printf("Can't get hsync-len, use 10 to default\n");
 		panel_info.vl_hspw = 10;
 	}
 
 	panel_info.vl_hfpd = fdtdec_get_int(blob, node, "hfront-porch", 0);
 	if (panel_info.vl_hfpd == 0) {
-		debug("Can't get hfront-porch, use 18 to default\n");
+		printf("Can't get hfront-porch, use 18 to default\n");
 		panel_info.vl_hfpd = 18;
 	}
 
 	panel_info.vl_hbpd = fdtdec_get_int(blob, node,	"hback-porch", 0);
 	if (panel_info.vl_hbpd == 0) {
-		debug("Can't get hback-porch use 100 to default\n");
+		printf("Can't get hback-porch use 100 to default\n");
 		panel_info.vl_hbpd = 100;
 	}
 
 	panel_info.vl_vspw = fdtdec_get_int(blob, node, "vsync-len", 0);
 	if (panel_info.vl_vspw == 0) {
-		debug("Can't get vsync-len, use 2 to default\n");
+		printf("Can't get vsync-len, use 2 to default\n");
 		panel_info.vl_vspw = 2;
 	}
 
 	panel_info.vl_vfpd = fdtdec_get_int(blob, node, "vfront-porch", 0);
 	if (panel_info.vl_vfpd == 0) {
-		debug("Can't get vfront-porch, use 6 to default\n");
+		printf("Can't get vfront-porch, use 6 to default\n");
 		panel_info.vl_vfpd = 6;
 	}
 
 	panel_info.vl_vbpd = fdtdec_get_int(blob, node, "vback-porch", 0);
 	if (panel_info.vl_vbpd == 0) {
-		debug("Can't get vback-porch, use 8 to default\n");
+		printf("Can't get vback-porch, use 8 to default\n");
 		panel_info.vl_vbpd = 8;
 	}
 

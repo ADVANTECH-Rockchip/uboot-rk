@@ -52,11 +52,10 @@
 #define CONFIG_BOOTDELAY		3
 
 /* switch debug port to normal uart */
-/*
 #define CONFIG_SWITCH_DEBUG_PORT_TO_UART
-#define CONFIG_SILENT_CONSOLE
-*/
+#define CONFIG_DISABLE_CONSOLE
 #define DEBUG_SWITCH_GPIO	(GPIO_BANK2 | GPIO_A0)
+#define DEBUG_SWITCH_GPIO_ACTIVE 1
 
 /* HW board ID */
 #define CONFIG_DISPLAY_BOARD_ID
@@ -66,9 +65,31 @@
 #define HW_BOARD_ID2	(GPIO_BANK0 | GPIO_A7)
 #endif
 
+/* UBOOT version */
+#define CONFIG_IDENT_STRING " V1.000"
+
+/* mac in spi*/
+#define CONFIG_CMD_NET
+#define CONFIG_MAC_IN_SPI
+#define CONFIG_SPI_MAC_OFFSET (896*1024)
+
+/*SPI*/
+#define CONFIG_SPI_FLASH
+#define CONFIG_SPI_FLASH_WINBOND
+#define CONFIG_RK_SPI
+#define CONFIG_CMD_SF
+#define CONFIG_SF_DEFAULT_BUS   2
+#define CONFIG_SF_DEFAULT_CS 0
+#define CONFIG_SF_DEFAULT_SPEED 24000000
+#define CONFIG_SF_DEFAULT_MODE SPI_MODE_3
+
+#define CONFIG_RTC_S35390A
+#define CONFIG_S35390A_ADDR	0x30
+#define CONFIG_RTC_I2C_BUS 0
+
 /* efuse version */
 #ifdef CONFIG_RK_EFUSE
-	#define CONFIG_RKEFUSE_V2
+#define CONFIG_RKEFUSE_V2
 #endif
 
 /* mmc using dma */
@@ -189,12 +210,6 @@
 
 #endif /* CONFIG_LCD */
 
-#define CONFIG_CMD_PING
-#define CONFIG_CMD_DHCP
-#define CONFIG_CMD_MII
-#define CONFIG_MII
-#define CONFIG_PHYLIB
-
 
 /* more config for charge */
 #ifdef CONFIG_UBOOT_CHARGE
@@ -222,7 +237,7 @@
 #define CONFIG_SYSTEM_ON_VOL_THRESD	0
 
 /******** pwm regulator driver ********/
-#define CONFIG_POWER_PWM_REGULATOR
+/*#define CONFIG_POWER_PWM_REGULATOR*/
 
 /******** pmic driver ********/
 #ifdef CONFIG_POWER_PMIC

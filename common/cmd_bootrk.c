@@ -510,6 +510,13 @@ int do_bootrk(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 	const disk_partition_t* ptn = NULL;
 	bootm_headers_t images;
 	bool charge = false;
+#ifdef CONFIG_ARCH_ADVANTECH
+	char command_line[1024],*s,*p;
+	uint len;
+	fdt32_t value;
+	int nodeoffset;
+	int err;
+#endif
 
 	if (argc >= 2) {
 		if (!strcmp(argv[1], "charge")) {
@@ -559,6 +566,80 @@ int do_bootrk(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 #endif
 
 	rk_commandline_setenv(boot_source, hdr, charge);
+#ifdef CONFIG_ARCH_ADVANTECH
+	s = getenv("display_mode");
+	if (s && !memcmp(s,"dual_lcd",8)) {
+		nodeoffset = fdt_node_offset_by_compatible(images.ft_addr,
+									 0, "rockchip,rk-fb");
+		value = cpu_to_fdt32(0);
+		err = fdt_setprop(images.ft_addr, nodeoffset, "rockchip,uboot-logo-on", &value, sizeof(uint32_t));
+		if(err)
+			printf("fdt_setprop rockchip,uboot-logo-on err:%d\n",err);
+		value = cpu_to_fdt32(3);
+		err = fdt_setprop(images.ft_addr, nodeoffset, "rockchip,disp-mode", &value, sizeof(uint32_t));
+		if(err)
+			printf("fdt_setprop rockchip,disp-mode err:%d\n",err);
+	} else {
+		nodeoffset = fdt_node_offset_by_compatible(images.ft_addr,
+								 0, "rockchip,rk3288-hdmi");
+		err = fdt_setprop(images.ft_addr, nodeoffset, "status", "okay",sizeof("okay"));
+		if(err)
+			printf("fdt_setprop rockchip,rk3288-hdmi status err:%d\n",err);
+		nodeoffset = fdt_node_offset_by_compatible(images.ft_addr,
+								 0, "hdmi-i2s");
+		err = fdt_setprop(images.ft_addr, nodeoffset, "status", "okay",sizeof("okay"));
+		if(err)
+			printf("fdt_setprop hdmi-i2s status err:%d\n",err);
+		nodeoffset = fdt_node_offset_by_compatible(images.ft_addr,
+								 0, "rockchip-hdmi-i2s");
+		err = fdt_setprop(images.ft_addr, nodeoffset, "status", "okay",sizeof("okay"));
+		if(err)
+			printf("fdt_setprop rockchip-hdmi-i2s status err:%d\n",err);
+	}
+
+	if(getenv("switch_debug")){
+		memset(command_line,0,sizeof(command_line));
+		p = getenv("bootargs");
+		s = p;
+		p = strstr(p,"console=");
+		memcpy(command_line,s,p-s);
+		snprintf(command_line, sizeof(command_line),
+					"%sconsole=%s", command_line, "/dev/null");
+		len = strlen(command_line);
+		p = strstr(p," ");
+		s = p;
+		p = strstr(p,"androidboot.console=");
+		memcpy(command_line+len,s,p-s);
+		snprintf(command_line, sizeof(command_line),
+					"%sandroidboot.console=%s", command_line, "/dev/null");
+		len = strlen(command_line);
+		p = strstr(p," ");
+		memcpy(command_line+len,p,strlen(p));
+		setenv("bootargs", command_line);
+	}
+	else
+		printf("%s,getenv switch_debug failed\n",__func__);
+
+	p = getenv("display_mode");
+	if(p) {
+		s = getenv("bootargs");
+		memset(command_line,0,sizeof(command_line));
+		memcpy(command_line,s,strlen(s));
+		strcat(command_line, " display_mode=");
+		strcat(command_line, p);
+		p = getenv("dual_lcd_screen0");
+		if(p) {
+			strcat(command_line, " dual_lcd_screen0=");
+			strcat(command_line, p);
+		}
+		p = getenv("dual_lcd_screen1");
+		if(p) {
+			strcat(command_line, " dual_lcd_screen1=");
+			strcat(command_line, p);
+		}
+		setenv("bootargs", command_line);
+	}
+#endif
 
 	/* Secure boot state will set drm, sn and others information in the nanc ram,
 	 * so, after set, PLS notice do not read/write nand flash.

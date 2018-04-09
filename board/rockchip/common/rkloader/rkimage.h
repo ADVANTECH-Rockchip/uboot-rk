@@ -149,6 +149,9 @@ typedef struct tag_second_loader_hdr
 #define SYSTEM_NAME     "system"
 #define BACKUP_NAME     "backup"
 #define RESOURCE_NAME   "resource"
+#ifdef CONFIG_ARCH_ADVANTECH
+#define BOARD_INFO_NAME   "board_info"
+#endif
 #define LOGO_NAME       "logo"
 #define FACTORY_NAME    "factory"
 

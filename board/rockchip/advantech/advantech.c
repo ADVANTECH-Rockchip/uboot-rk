@@ -17,8 +17,15 @@
 
 #include "../common/config.h"
 
-#ifdef CONFIG_SWITCH_DEBUG_PORT_TO_UART
-static unsigned int uart_funtion = 0;
+#ifdef CONFIG_MAC_IN_SPI
+#include <version.h>
+#include <spi_flash.h>
+
+struct boardcfg_t {
+    unsigned char mac[6];
+    unsigned char sn[10];
+    unsigned char Manufacturing_Time[14];
+};
 #endif
 
 DECLARE_GLOBAL_DATA_PTR;
@@ -78,11 +85,14 @@ int board_early_init_f(void)
 {
 #ifdef CONFIG_SWITCH_DEBUG_PORT_TO_UART
 	gpio_direction_input(DEBUG_SWITCH_GPIO);
-	uart_funtion = gpio_get_value(DEBUG_SWITCH_GPIO);
-
-	if (uart_funtion == 1)
-		gd->flags |= GD_FLG_SILENT;
+	if (gpio_get_value(DEBUG_SWITCH_GPIO) == DEBUG_SWITCH_GPIO_ACTIVE) {
+		gd->flags |= GD_FLG_DISABLE_CONSOLE;
+		//reconfig iomux to defalt gpio
+		grf_writel((3 << 28) | (3 << 24), GRF_GPIO7CH_IOMUX);
+	}
 #endif
+
+	return 0;
 }
 
 #ifdef CONFIG_DISPLAY_BOARDINFO
@@ -92,7 +102,7 @@ int board_early_init_f(void)
 int checkboard(void)
 {
 	uint32 ver=0;
-	
+
 #ifdef CONFIG_DISPLAY_BOARD_ID
 	gpio_direction_input(HW_BOARD_ID2);
 	gpio_direction_input(HW_BOARD_ID1);
@@ -133,6 +143,52 @@ int arch_early_init_r(void)
 }
 #endif
 
+#ifdef CONFIG_MAC_IN_SPI
+static int board_info_in_spi(void)
+{
+    struct spi_flash *flash;
+	uchar enetaddr[6];
+	u32 valid;
+
+	flash = spi_flash_probe(CONFIG_SF_DEFAULT_BUS, CONFIG_SF_DEFAULT_CS,
+				CONFIG_SF_DEFAULT_SPEED, CONFIG_SF_DEFAULT_MODE);
+	if (!flash)
+		return -1;
+	if(spi_flash_read(flash, CONFIG_SPI_MAC_OFFSET, 6, enetaddr)==0) {
+		spi_flash_free(flash);
+		valid = is_valid_ether_addr(enetaddr);
+
+		if (valid)
+			eth_setenv_enetaddr("ethaddr", enetaddr);
+		else
+			puts("Skipped ethaddr assignment due to invalid,using default!\n");
+	} else
+		return -1;
+}
+#endif 
+
+static void board_info_config()
+{
+	const disk_partition_t *ptn = NULL;
+	unsigned long blksz;
+	unsigned char *buf;
+
+	ptn	= get_disk_partition(BOARD_INFO_NAME);
+	if (ptn) {
+		blksz = ptn->blksz;
+		buf = memalign(ARCH_DMA_MINALIGN, blksz << 2);
+		if (buf) {
+			if (StorageReadLba(ptn->start, (void *) buf, 1) == 0) {
+				buf[17] = 0;
+				setenv("ethaddr",buf);
+			} else
+				printf("failed to read %s partition\n",BOARD_INFO_NAME);
+			free(buf);
+		} else
+			printf("error allocating blksz(%lu) buffer\n", blksz);
+	} else
+		printf("failed to get %s partition\n",BOARD_INFO_NAME);
+}
 
 #define RAMDISK_ZERO_COPY_SETTING	"0xffffffff=n\0"
 static void board_init_adjust_env(void)
@@ -188,8 +244,23 @@ static void board_init_adjust_env(void)
 	}
 
 #ifdef CONFIG_SWITCH_DEBUG_PORT_TO_UART
-	if (uart_funtion == 1)
-		setenv("console", "/dev/null");
+	if (gpio_get_value(DEBUG_SWITCH_GPIO) == DEBUG_SWITCH_GPIO_ACTIVE)
+		setenv("switch_debug","yes");
+	else
+		setenv("switch_debug",NULL);
+#endif
+}
+
+static void clear_rtc_irq_status(void)
+{
+	u8 buf=0;
+	i2c_set_bus_num(CONFIG_RTC_I2C_BUS);
+#ifdef CONFIG_RTC_S35390A
+	i2c_init(100000, CONFIG_S35390A_ADDR);
+	/* disable interrupt */
+	i2c_write(CONFIG_S35390A_ADDR+1, 0, 0, &buf, 1);
+	/* clear pending interrupt, if any */
+	i2c_read(CONFIG_S35390A_ADDR, 0, 0, &buf, 1);
 #endif
 }
 
@@ -198,6 +269,8 @@ extern char bootloader_ver[24];
 int board_late_init(void)
 {
 	debug("board_late_init\n");
+
+	clear_rtc_irq_status();
 
 	board_init_adjust_env();
 
@@ -249,8 +322,11 @@ int board_late_init(void)
 
 	debug("fbt preboot\n");
 	board_fbt_preboot();
-
+#ifdef CONFIG_MAC_IN_SPI
+	board_info_in_spi();
+#else
+	board_info_config();
+#endif
 	return 0;
 }
 #endif
-
