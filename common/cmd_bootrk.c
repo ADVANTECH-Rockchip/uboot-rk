@@ -595,6 +595,16 @@ int do_bootrk(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 		err = fdt_setprop(images.ft_addr, nodeoffset, "status", "okay",sizeof("okay"));
 		if(err)
 			printf("fdt_setprop rockchip-hdmi-i2s status err:%d\n",err);
+
+		p = getenv("switch_hdmi_audio");
+		if(p) {
+			s = getenv("bootargs");
+			memset(command_line,0,sizeof(command_line));
+			memcpy(command_line,s,strlen(s));
+			strcat(command_line, " switch_hdmi_audio=");
+			strcat(command_line, p);
+			setenv("bootargs", command_line);
+		}
 	}
 
 	if(getenv("switch_debug")){
