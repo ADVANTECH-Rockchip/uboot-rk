@@ -24,6 +24,11 @@ config PLAT_RSB4680A2_2G
 	select ROCKCHIP
 	select ARCH_ADVANTECH
 
+config PLAT_EBCRB03A1_2G
+	bool "Support rk3288 ebcrb03a101-1 2G"
+	select ROCKCHIP
+	select ARCH_ADVANTECH
+
 endchoice
 
 
