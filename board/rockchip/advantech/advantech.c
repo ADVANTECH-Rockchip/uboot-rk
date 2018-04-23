@@ -111,7 +111,7 @@ int checkboard(void)
 	ver = (ver<<1) | gpio_get_value(HW_BOARD_ID1);
 	ver = (ver<<1) | gpio_get_value(HW_BOARD_ID0);
 #endif
-	printf("Board:Advantech RSB-4680 Board,HW version:%d\n",ver);
+	printf("Board:Advantech %s Board,HW version:%d\n",CONFIG_SYS_CONFIG_NAME,ver);
 #ifdef CONFIG_SECOND_LEVEL_BOOTLOADER
 	printf("Uboot as second level loader\n");
 #endif
