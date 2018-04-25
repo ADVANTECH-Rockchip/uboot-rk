@@ -37,6 +37,16 @@
  */
 #include <configs/rk_default_config.h>
 
+/* define CONFIG_EXTRA_ENV_SETTINGS */
+#ifdef CONFIG_EXTRA_ENV_SETTINGS
+#undef CONFIG_EXTRA_ENV_SETTINGS
+#endif
+#ifdef CONFIG_ARM64
+#define CONFIG_EXTRA_ENV_SETTINGS	"verify=n\0initrd_high=0xffffffffffffffff=n\0switch_hdmi_audio=1\0"
+#else
+#define CONFIG_EXTRA_ENV_SETTINGS	"verify=n\0initrd_high=0xffffffff=n\0switch_hdmi_audio=1\0"
+#endif
+
 /* config for sha256 image check */
 #define CONFIG_SECUREBOOT_SHA256
 
