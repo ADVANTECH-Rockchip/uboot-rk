@@ -80,6 +80,7 @@
 
 /* mac in spi*/
 #define CONFIG_CMD_NET
+#define CONFIG_ENV_OVERWRITE
 #define CONFIG_MAC_IN_SPI
 #define CONFIG_SPI_MAC_OFFSET (896*1024)
 
