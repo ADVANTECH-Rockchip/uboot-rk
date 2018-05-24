@@ -415,6 +415,9 @@ void board_fbt_preboot(void)
 	int uboot_charge_on = 0;
 	int android_charge_on = 0;
 #endif
+#ifdef CONFIG_ARCH_ADVANTECH
+	char *p;
+#endif
 
 #ifdef CONFIG_CMD_FASTBOOT
 	/* need to init this ASAP so we know the unlocked state */
@@ -505,6 +508,10 @@ void board_fbt_preboot(void)
 		lcd_standby(0);
 #ifdef CONFIG_RK_PWM_BL
 		/* use defaut brightness in dts */
+#ifdef CONFIG_ARCH_ADVANTECH
+		p = getenv("prmry_screen");
+		if (p && !memcmp(p,"lvds",4))
+#endif
 		rk_pwm_bl_config(-1);
 #endif
 	}

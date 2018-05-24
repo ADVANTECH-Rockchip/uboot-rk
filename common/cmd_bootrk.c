@@ -511,7 +511,7 @@ int do_bootrk(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 	bootm_headers_t images;
 	bool charge = false;
 #ifdef CONFIG_ARCH_ADVANTECH
-	char command_line[1024],*s,*p;
+	char command_line[1024],*e,*p;
 	uint len;
 	fdt32_t value;
 	int nodeoffset;
@@ -567,19 +567,89 @@ int do_bootrk(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 
 	rk_commandline_setenv(boot_source, hdr, charge);
 #ifdef CONFIG_ARCH_ADVANTECH
-	s = getenv("display_mode");
-	if (s && !memcmp(s,"dual_lcd",8)) {
-		nodeoffset = fdt_node_offset_by_compatible(images.ft_addr,
-									 0, "rockchip,rk-fb");
+	if(getenv("switch_debug")){
+		memset(command_line,0,sizeof(command_line));
+		p = getenv("bootargs");
+		e = p;
+		p = strstr(p,"console=");
+		memcpy(command_line,e,p-e);
+		snprintf(command_line, sizeof(command_line),
+					"%sconsole=%s", command_line, "/dev/null");
+		len = strlen(command_line);
+		p = strstr(p," ");
+		e = p;
+		p = strstr(p,"androidboot.console=");
+		memcpy(command_line+len,e,p-e);
+		snprintf(command_line, sizeof(command_line),
+					"%sandroidboot.console=%s", command_line, "/dev/null");
+		len = strlen(command_line);
+		p = strstr(p," ");
+		memcpy(command_line+len,p,strlen(p));
+		setenv("bootargs", command_line);
+	}
+
+	e = getenv("bootargs");
+	memset(command_line,0,sizeof(command_line));
+	memcpy(command_line,e,strlen(e));
+
+	p = getenv("prmry_screen");
+	if(p) {
+		strcat(command_line, " prmry_screen=");
+		strcat(command_line, p);
+	}
+
+	e = getenv("extend_screen");
+	if(e) {
+		strcat(command_line, " extend_screen=");
+		strcat(command_line, e);
+	}
+
+	if((!e && !p) || (e && !memcmp(e,"hdmi",4))) {
+		printf("enable lcdc2,equal to lcdc0 as extend display\n");
+		nodeoffset = fdt_path_offset(images.ft_addr, "lcdc1");
+		value = cpu_to_fdt32(1);
+		if(nodeoffset)
+			fdt_setprop(images.ft_addr, nodeoffset, "rockchip,prop", &value, sizeof(uint32_t));
+		
+		nodeoffset = fdt_path_offset(images.ft_addr, "lcdc2");
+		if(nodeoffset) {
+			fdt_setprop(images.ft_addr, nodeoffset, "status", "okay",sizeof("okay"));
+			value = cpu_to_fdt32(2);
+			fdt_setprop(images.ft_addr, nodeoffset, "rockchip,prop", &value, sizeof(uint32_t));
+		}else
+			printf("error,can't find lcdc2\n");
+
+		nodeoffset = fdt_node_offset_by_compatible(images.ft_addr,0, "rockchip,rk-fb");
+		value = cpu_to_fdt32(1);
+		err = fdt_setprop(images.ft_addr, nodeoffset, "rockchip,uboot-logo-on", &value, sizeof(uint32_t));
+		if(err)
+			printf("fdt_setprop rockchip,uboot-logo-on err:%d\n",err);
+		
+		value = cpu_to_fdt32(2);
+	} else {
+		printf("dual_lcd mode\n");
+		strcat(command_line, " display_mode=");
+		strcat(command_line, "dual_lcd");
+
+		nodeoffset = fdt_path_offset(images.ft_addr, "lcdc0");
+		if(nodeoffset)
+			fdt_setprop(images.ft_addr, nodeoffset, "status", "okay",sizeof("okay"));
+		
+		nodeoffset = fdt_node_offset_by_compatible(images.ft_addr,0, "rockchip,rk-fb");
 		value = cpu_to_fdt32(0);
 		err = fdt_setprop(images.ft_addr, nodeoffset, "rockchip,uboot-logo-on", &value, sizeof(uint32_t));
 		if(err)
 			printf("fdt_setprop rockchip,uboot-logo-on err:%d\n",err);
+
 		value = cpu_to_fdt32(3);
-		err = fdt_setprop(images.ft_addr, nodeoffset, "rockchip,disp-mode", &value, sizeof(uint32_t));
-		if(err)
-			printf("fdt_setprop rockchip,disp-mode err:%d\n",err);
-	} else {
+	}
+	err = fdt_setprop(images.ft_addr, nodeoffset, "rockchip,disp-mode", &value, sizeof(uint32_t));
+	if(err)
+		printf("fdt_setprop rockchip,disp-mode err:%d\n",err);
+	
+	setenv("bootargs", command_line);
+
+	if ((!p && !e) || (p && !memcmp(p,"hdmi",4)) || (e && !memcmp(e,"hdmi",4))) {
 		nodeoffset = fdt_node_offset_by_compatible(images.ft_addr,
 								 0, "rockchip,rk3288-hdmi");
 		err = fdt_setprop(images.ft_addr, nodeoffset, "status", "okay",sizeof("okay"));
@@ -595,59 +665,6 @@ int do_bootrk(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 		err = fdt_setprop(images.ft_addr, nodeoffset, "status", "okay",sizeof("okay"));
 		if(err)
 			printf("fdt_setprop rockchip-hdmi-i2s status err:%d\n",err);
-
-		p = getenv("switch_hdmi_audio");
-		if(p) {
-			s = getenv("bootargs");
-			memset(command_line,0,sizeof(command_line));
-			memcpy(command_line,s,strlen(s));
-			strcat(command_line, " switch_hdmi_audio=");
-			strcat(command_line, p);
-			setenv("bootargs", command_line);
-		}
-	}
-
-	if(getenv("switch_debug")){
-		memset(command_line,0,sizeof(command_line));
-		p = getenv("bootargs");
-		s = p;
-		p = strstr(p,"console=");
-		memcpy(command_line,s,p-s);
-		snprintf(command_line, sizeof(command_line),
-					"%sconsole=%s", command_line, "/dev/null");
-		len = strlen(command_line);
-		p = strstr(p," ");
-		s = p;
-		p = strstr(p,"androidboot.console=");
-		memcpy(command_line+len,s,p-s);
-		snprintf(command_line, sizeof(command_line),
-					"%sandroidboot.console=%s", command_line, "/dev/null");
-		len = strlen(command_line);
-		p = strstr(p," ");
-		memcpy(command_line+len,p,strlen(p));
-		setenv("bootargs", command_line);
-	}
-	else
-		printf("%s,getenv switch_debug failed\n",__func__);
-
-	p = getenv("display_mode");
-	if(p) {
-		s = getenv("bootargs");
-		memset(command_line,0,sizeof(command_line));
-		memcpy(command_line,s,strlen(s));
-		strcat(command_line, " display_mode=");
-		strcat(command_line, p);
-		p = getenv("dual_lcd_screen0");
-		if(p) {
-			strcat(command_line, " dual_lcd_screen0=");
-			strcat(command_line, p);
-		}
-		p = getenv("dual_lcd_screen1");
-		if(p) {
-			strcat(command_line, " dual_lcd_screen1=");
-			strcat(command_line, p);
-		}
-		setenv("bootargs", command_line);
 	}
 #endif
 

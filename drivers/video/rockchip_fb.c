@@ -149,9 +149,38 @@ int rk_fb_find_lcdc_node_dt(struct rockchip_fb *fb,
 			    const void *blob)
 {
 	int node;
+#ifdef CONFIG_ARCH_ADVANTECH
+	char *p,*e;
+	fdt32_t value;
+	int err;
+
+	p = getenv("prmry_screen");
+	e = getenv("extend_screen");
+	if((p && !memcmp(p,"hdmi",4)) || (e && !memcmp(e,"hdmi",4))) {
+		node = fdt_node_offset_by_compatible(blob, 0, "rockchip,rk3288-hdmi");
+		err = fdt_setprop(blob, node, "status", "okay",sizeof("okay"));
+		if(err)
+			printf("fdt_setprop rockchip,rk3288-hdmi status err:%d\n",err);
+	}
+	
+	if(memcmp(e,"hdmi",4)) {
+		node = fdt_path_offset(blob, "lcdc0");
+		if(node)
+			fdt_setprop(blob, node, "status", "okay",sizeof("okay"));
+	} else {
+		node = fdt_path_offset(blob, "lcdc1");
+		value = cpu_to_fdt32(1);
+		if(node)
+			fdt_setprop(blob, node, "rockchip,prop", &value, sizeof(uint32_t));
+	}
 
 	node = fdt_path_offset(blob, "lcdc0");
+	if ((PRMRY == fdtdec_get_int(blob, node, "rockchip,prop", 0)) && 
+		fdt_device_is_available(blob, node)) {
+#else
+	node = fdt_path_offset(blob, "lcdc0");
 	if (PRMRY == fdtdec_get_int(blob, node, "rockchip,prop", 0)) {
+#endif
 		fb->lcdc_id = 0;
 	} else {
 		node = fdt_path_offset(blob, "lcdc1");
@@ -163,14 +192,23 @@ int rk_fb_find_lcdc_node_dt(struct rockchip_fb *fb,
 		}
 	}
 	fb->lcdc_node = node;
-	debug("rockchip fb use lcdc%d\n", fb->lcdc_id);
+	printf("rockchip fb use lcdc%d\n", fb->lcdc_id);
 
 	return node;
 }
 
 int rk_fb_pwr_ctr_parse_dt(struct rockchip_fb *rk_fb, const void *blob)
 {
+#ifdef CONFIG_ARCH_ADVANTECH
+	int root;
+	if((panel_info.screen_type == SCREEN_DUAL_LVDS) || 
+	   (panel_info.screen_type == SCREEN_LVDS))
+		root = fdt_subnode_offset(blob, fdt_path_offset(blob, "lvds"), "power_ctr");
+	else
+		root = 0;
+#else
 	int root = fdt_subnode_offset(blob, rk_fb->lcdc_node, "power_ctr");
+#endif
 	int child;
 	struct rk_fb_pwr_ctr_list *pwr_ctr;
 #if defined(DEBUG)
@@ -317,56 +355,32 @@ int rk_fb_parse_dt(struct rockchip_fb *rk_fb, const void *blob)
 		return -ENODEV;
 	}
 #ifdef CONFIG_ARCH_ADVANTECH
-	int x=0,y=0,screen_type=SCREEN_NULL;
 	int use_native_mode=1;
-	char *s,*p,*t;
+	char *p,*e;
 	int node1=node;
-
-	s = getenv("display_mode");
-	if(s){
-		if (!memcmp(s,"edp_",4)) {
-			screen_type = SCREEN_EDP;
-		} else if (!memcmp(s,"lvds_",5)) {
-			screen_type = SCREEN_LVDS;
-		} else if (!memcmp(s,"dual_lvds_",10)) {
-			screen_type = SCREEN_DUAL_LVDS;
-		} else if (!memcmp(s,"dual_lcd",8)) {
-			screen_type = SCREEN_LVDS;
-			s = getenv("dual_lcd_screen0");
-			if(memcmp(s,"lvds_",5)){
-				s = getenv("dual_lcd_screen1");
-			}
-		}
-		if(SCREEN_NULL != screen_type) {
-			p = strrchr(s,'_');
-			if(p) {
-				x=atoi(p+1);
-			}
-			t = strrchr(s,'x');
-			if(t) {
-				y=atoi(t+1);
-			}
-		}
-		if((x>0) && (y>0) && (screen_type>0)) {
-			for (node1 = fdt_first_subnode(blob,node1);
-				node1 >= 0;
-				node1 = fdt_next_subnode(blob, node1)) {
-				if((x == fdtdec_get_int(blob, node1, "hactive", 0)) && 
-				   (y == fdtdec_get_int(blob, node1, "vactive", 0)) && 
-				   (screen_type == fdtdec_get_int(blob, node1, "screen-type", -1))) {
-				   use_native_mode = 0;
-				   node = node1;
-				   break;
-				}
+	
+	p = getenv("prmry_screen");
+	e = getenv("extend_screen");
+	if(p) {
+		for (node1 = fdt_first_subnode(blob,node1);
+			node1 >= 0;
+			node1 = fdt_next_subnode(blob, node1)) {
+			if(!memcmp(fdt_get_name(blob, node1, NULL),p,strlen(p))) {
+			   use_native_mode = 0;
+			   node = node1;
+			   break;
 			}
 		}
 	}
+
 	if (use_native_mode) {
 #endif
 		printf("environment has no valid display_mode,so use native-mode from dts\n");
 		phandle = fdt_getprop_u32_default_node(blob, node, 0, "native-mode", -1);
 		node = fdt_node_offset_by_phandle_node(blob, node, phandle);
 #ifdef CONFIG_ARCH_ADVANTECH
+		setenv("prmry_screen",fdt_get_name(blob, node, NULL));
+		setenv("extend_screen","hdmi-720p");
 	}
 #endif
 #endif
@@ -521,6 +535,9 @@ void lcd_ctrl_init(void *lcdbase)
 #endif
 
 #if defined(CONFIG_RK_HDMI)
+#ifdef CONFIG_ARCH_ADVANTECH
+	if(!memcmp(getenv("prmry_screen"),"hdmi",4))
+#endif
 	rk_hdmi_probe(&panel_info);
 #endif
 
