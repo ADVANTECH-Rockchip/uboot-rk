@@ -21,7 +21,6 @@
 /* reserve iomap memory. */
 #define CONFIG_MAX_MEM_ADDR		0xFE000000
 
-
 /*
  * 		define uboot loader addr.
  * notice: CONFIG_SYS_TEXT_BASE must be an immediate,
@@ -36,11 +35,6 @@
  * rk plat default configs.
  */
 #include <configs/rk_default_config.h>
-
-/* define CONFIG_EXTRA_ENV_SETTINGS */
-#ifdef CONFIG_EXTRA_ENV_SETTINGS
-#undef CONFIG_EXTRA_ENV_SETTINGS
-#endif
 
 /* config for sha256 image check */
 #define CONFIG_SECUREBOOT_SHA256
