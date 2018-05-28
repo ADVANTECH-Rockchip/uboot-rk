@@ -37,11 +37,6 @@
  */
 #include <configs/rk_default_config.h>
 
-/* define CONFIG_EXTRA_ENV_SETTINGS */
-#ifdef CONFIG_EXTRA_ENV_SETTINGS
-#undef CONFIG_EXTRA_ENV_SETTINGS
-#endif
-
 /* config for sha256 image check */
 #define CONFIG_SECUREBOOT_SHA256
 
