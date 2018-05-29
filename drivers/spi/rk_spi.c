@@ -248,11 +248,12 @@ static inline void rkspi_io_config(struct rk_spi_slave *spi, unsigned int len, c
 		spi->write = rkspi_null_writer;
 	}
 
-#ifndef CONFIG_ARCH_ADVANTECH
 	if (spi->tx == NULL && spi->rx == NULL) {
 		spi->read = rkspi_null_reader;
 		spi->write = rkspi_null_writer;
-	} else if (spi->tx == NULL) {
+	}
+#ifndef CONFIG_ARCH_ADVANTECH
+	else if (spi->tx == NULL) {
 		spi->write = rkspi_null_writer;
 	} else if (spi->rx == NULL) {
 		spi->read = rkspi_null_reader;

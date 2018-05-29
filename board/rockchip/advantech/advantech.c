@@ -194,27 +194,7 @@ static void board_info_config()
 static void board_init_adjust_env(void)
 {
 	bool change = false;
-
-	char *s = getenv("bootdelay");
-	if (s != NULL) {
-		unsigned long bootdelay = 0;
-
-		bootdelay = simple_strtoul(s, NULL, 16);
-		debug("getenv: bootdelay = %lu\n", bootdelay);
-#if (CONFIG_BOOTDELAY <= 0)
-		if (bootdelay > 0) {
-			setenv("bootdelay", simple_itoa(0));
-			change = true;
-			debug("setenv: bootdelay = 0\n");
-		}
-#else
-		if (bootdelay != CONFIG_BOOTDELAY) {
-			setenv("bootdelay", simple_itoa(CONFIG_BOOTDELAY));
-			change = true;
-			debug("setenv: bootdelay = %d\n", CONFIG_BOOTDELAY);
-		}
-#endif
-	}
+	char *s;
 
 	s = getenv("bootcmd");
 	if (s != NULL) {
