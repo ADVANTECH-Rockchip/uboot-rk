@@ -56,6 +56,9 @@
 #define DEBUG_SWITCH_GPIO	(GPIO_BANK2 | GPIO_A0)
 #define DEBUG_SWITCH_GPIO_ACTIVE 1
 
+/* reset pmic to reset all system */
+#define CONFIG_RESET_PMIC_GPIO	(GPIO_BANK0 | GPIO_B2)
+
 /* HW board ID */
 #define CONFIG_DISPLAY_BOARD_ID
 #ifdef CONFIG_DISPLAY_BOARD_ID

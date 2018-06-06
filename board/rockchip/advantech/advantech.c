@@ -92,6 +92,16 @@ int board_early_init_f(void)
 	}
 #endif
 
+#ifdef CONFIG_RESET_PMIC_GPIO
+	if(SYS_LOADER_REBOOT_FLAG == IReadLoaderFlag())
+	{
+		gpio_direction_output(CONFIG_RESET_PMIC_GPIO,1);
+		mdelay(5);
+		gpio_direction_output(CONFIG_RESET_PMIC_GPIO,0);
+		while(1);
+	}
+#endif
+
 	return 0;
 }
 
