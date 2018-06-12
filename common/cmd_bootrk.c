@@ -501,7 +501,6 @@ static void rk_commandline_setenv(const char *boot_name, rk_boot_img_hdr *hdr, b
 #endif /* CONFIG_CMDLINE_TAG */
 }
 
-
 /* bootrk [ <addr> | <partition> ] */
 int do_bootrk(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 {
@@ -605,7 +604,6 @@ int do_bootrk(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 	}
 
 	if((!e && !p) || (e && !memcmp(e,"hdmi",4))) {
-		printf("enable lcdc2,equal to lcdc0 as extend display\n");
 		nodeoffset = fdt_path_offset(images.ft_addr, "lcdc1");
 		value = cpu_to_fdt32(1);
 		if(nodeoffset)
@@ -614,33 +612,45 @@ int do_bootrk(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 		nodeoffset = fdt_path_offset(images.ft_addr, "lcdc2");
 		if(nodeoffset) {
 			fdt_setprop(images.ft_addr, nodeoffset, "status", "okay",sizeof("okay"));
-			value = cpu_to_fdt32(2);
-			fdt_setprop(images.ft_addr, nodeoffset, "rockchip,prop", &value, sizeof(uint32_t));
 		}else
 			printf("error,can't find lcdc2\n");
 
 		nodeoffset = fdt_node_offset_by_compatible(images.ft_addr,0, "rockchip,rk-fb");
-		value = cpu_to_fdt32(1);
-		err = fdt_setprop(images.ft_addr, nodeoffset, "rockchip,uboot-logo-on", &value, sizeof(uint32_t));
-		if(err)
-			printf("fdt_setprop rockchip,uboot-logo-on err:%d\n",err);
-		
-		value = cpu_to_fdt32(2);
-	} else {
-		printf("dual_lcd mode\n");
-		strcat(command_line, " display_mode=");
-		strcat(command_line, "dual_lcd");
-
-		nodeoffset = fdt_path_offset(images.ft_addr, "lcdc0");
-		if(nodeoffset)
-			fdt_setprop(images.ft_addr, nodeoffset, "status", "okay",sizeof("okay"));
-		
-		nodeoffset = fdt_node_offset_by_compatible(images.ft_addr,0, "rockchip,rk-fb");
+#ifdef CONFIG_ARCH_ADVANTECH_UBOOT_LOGO
 		value = cpu_to_fdt32(0);
 		err = fdt_setprop(images.ft_addr, nodeoffset, "rockchip,uboot-logo-on", &value, sizeof(uint32_t));
 		if(err)
 			printf("fdt_setprop rockchip,uboot-logo-on err:%d\n",err);
+#endif
+		value = cpu_to_fdt32(2);
+	} else {
+		strcat(command_line, " display_mode=");
+		strcat(command_line, "dual_lcd");
 
+		if(p && !memcmp(p,"lvds",4))
+		{
+			nodeoffset = fdt_path_offset(images.ft_addr, "lcdc1");
+			value = cpu_to_fdt32(1);
+			if(nodeoffset)
+				fdt_setprop(images.ft_addr, nodeoffset, "rockchip,prop", &value, sizeof(uint32_t));
+			
+			nodeoffset = fdt_path_offset(images.ft_addr, "lcdc2");
+			if(nodeoffset) {
+				fdt_setprop(images.ft_addr, nodeoffset, "status", "okay",sizeof("okay"));
+			}else
+				printf("error,can't find lcdc2\n");
+		} else {
+			nodeoffset = fdt_path_offset(images.ft_addr, "lcdc0");
+			if(nodeoffset)
+				fdt_setprop(images.ft_addr, nodeoffset, "status", "okay",sizeof("okay"));
+		}
+		nodeoffset = fdt_node_offset_by_compatible(images.ft_addr,0, "rockchip,rk-fb");
+#ifdef CONFIG_ARCH_ADVANTECH_UBOOT_LOGO
+		value = cpu_to_fdt32(0);
+		err = fdt_setprop(images.ft_addr, nodeoffset, "rockchip,uboot-logo-on", &value, sizeof(uint32_t));
+		if(err)
+			printf("fdt_setprop rockchip,uboot-logo-on err:%d\n",err);
+#endif
 		value = cpu_to_fdt32(3);
 	}
 	err = fdt_setprop(images.ft_addr, nodeoffset, "rockchip,disp-mode", &value, sizeof(uint32_t));

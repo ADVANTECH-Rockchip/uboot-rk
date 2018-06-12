@@ -459,6 +459,12 @@ void board_fbt_preboot(void)
 		lcd_enable_logo(true);
 		drv_lcd_init();
 	}
+#ifdef CONFIG_ARCH_ADVANTECH
+	else {
+		int node = fdt_path_offset(gd->fdt_blob, "/display-timings");
+		adv_parse_display_mode(gd->fdt_blob,node);
+	}
+#endif
 #endif
 
 #ifdef CONFIG_RK_POWER

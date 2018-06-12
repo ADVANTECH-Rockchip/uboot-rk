@@ -324,6 +324,54 @@ static int atoi(const char *s)
 }
 #endif
 
+#ifdef CONFIG_ARCH_ADVANTECH
+int adv_parse_display_mode(const void *blob,int node)
+{
+	char *p;
+	int node1=node;
+	int node2;
+	int use_dts_screen=0;
+	int phandle;
+	int use_native_mode = 1;
+
+	use_dts_screen = fdtdec_get_int(blob, node, "use-dts-screen", 0);
+	if(!use_dts_screen || getenv("use_env_screen")){
+		p = getenv("prmry_screen");
+		if(p) {
+			for (node1 = fdt_first_subnode(blob,node1);
+				node1 >= 0;
+				node1 = fdt_next_subnode(blob, node1)) {
+				if(!memcmp(fdt_get_name(blob, node1, NULL),p,strlen(p))) {
+				   use_native_mode = 0;
+				   node = node1;
+				   break;
+				}
+			}
+		}
+	} else {
+		phandle = fdt_getprop_u32_default_node(blob, node, 0, "extend-screen", -1);
+		node2 = fdt_node_offset_by_phandle_node(blob, node, phandle);
+		phandle = fdt_getprop_u32_default_node(blob, node, 0, "prmry-screen", -1);
+		node1 = fdt_node_offset_by_phandle_node(blob, node, phandle);
+		if((node2 > 0) && (node1 > 0)) {
+			setenv("extend_screen",fdt_get_name(blob, node2, NULL));
+			setenv("prmry_screen",fdt_get_name(blob, node1, NULL));
+			use_native_mode = 0;
+			node = node1;
+		}
+	}
+
+	if (use_native_mode) {
+		printf("environment has no valid display_mode,so use native-mode from dts\n");
+		phandle = fdt_getprop_u32_default_node(blob, node, 0, "native-mode", -1);
+		node = fdt_node_offset_by_phandle_node(blob, node, phandle);
+		setenv("prmry_screen",fdt_get_name(blob, node, NULL));
+		setenv("extend_screen","hdmi-720p");
+	}
+	return node;
+}
+#endif
+
 int rk_fb_parse_dt(struct rockchip_fb *rk_fb, const void *blob)
 {
 	int node;
@@ -355,48 +403,11 @@ int rk_fb_parse_dt(struct rockchip_fb *rk_fb, const void *blob)
 		return -ENODEV;
 	}
 #ifdef CONFIG_ARCH_ADVANTECH
-	int use_native_mode=1;
-	char *p;
-	int node1=node;
-	int node2;
-	int use_dts_screen=0;
-
-	use_dts_screen = fdtdec_get_int(blob, node, "use-dts-screen", 0);
-	if(!use_dts_screen || getenv("use_env_screen")){
-		p = getenv("prmry_screen");
-		if(p) {
-			for (node1 = fdt_first_subnode(blob,node1);
-				node1 >= 0;
-				node1 = fdt_next_subnode(blob, node1)) {
-				if(!memcmp(fdt_get_name(blob, node1, NULL),p,strlen(p))) {
-				   use_native_mode = 0;
-				   node = node1;
-				   break;
-				}
-			}
-		}
-	} else {
-		phandle = fdt_getprop_u32_default_node(blob, node, 0, "extend-screen", -1);
-		node2 = fdt_node_offset_by_phandle_node(blob, node, phandle);
-		phandle = fdt_getprop_u32_default_node(blob, node, 0, "prmry-screen", -1);
-		node1 = fdt_node_offset_by_phandle_node(blob, node, phandle);
-		if((node2 > 0) && (node1 > 0)) {
-			setenv("extend_screen",fdt_get_name(blob, node2, NULL));
-			setenv("prmry_screen",fdt_get_name(blob, node1, NULL));
-			use_native_mode = 0;
-			node = node1;
-		}
-	}
-
-	if (use_native_mode) {
-#endif
-		printf("environment has no valid display_mode,so use native-mode from dts\n");
-		phandle = fdt_getprop_u32_default_node(blob, node, 0, "native-mode", -1);
-		node = fdt_node_offset_by_phandle_node(blob, node, phandle);
-#ifdef CONFIG_ARCH_ADVANTECH
-		setenv("prmry_screen",fdt_get_name(blob, node, NULL));
-		setenv("extend_screen","hdmi-720p");
-	}
+	node = adv_parse_display_mode(blob,node);
+#else
+	printf("environment has no valid display_mode,so use native-mode from dts\n");
+	phandle = fdt_getprop_u32_default_node(blob, node, 0, "native-mode", -1);
+	node = fdt_node_offset_by_phandle_node(blob, node, phandle);
 #endif
 #endif
 	if (node <= 0) {
