@@ -203,7 +203,7 @@
 #ifdef CONFIG_LCD
 
 #define CONFIG_RK32_FB
-#define CONFIG_RK_HDMI
+/*#define CONFIG_RK_HDMI*/
 
 #ifdef CONFIG_RK_HDMI
 #define CONFIG_RK_HDMIV2
