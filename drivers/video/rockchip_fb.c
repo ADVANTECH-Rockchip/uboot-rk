@@ -366,7 +366,7 @@ int adv_parse_display_mode(const void *blob,int node)
 		phandle = fdt_getprop_u32_default_node(blob, node, 0, "native-mode", -1);
 		node = fdt_node_offset_by_phandle_node(blob, node, phandle);
 		setenv("prmry_screen",fdt_get_name(blob, node, NULL));
-		setenv("extend_screen","hdmi-720p");
+		setenv("extend_screen","hdmi-1080p");
 	}
 	return node;
 }
