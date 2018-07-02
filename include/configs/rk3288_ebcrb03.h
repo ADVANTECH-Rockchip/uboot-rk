@@ -49,7 +49,8 @@
 #endif
 
 /* mod it to enable console commands.	*/
-#define CONFIG_BOOTDELAY		3
+#define CONFIG_BOOTDELAY		0
+#define CONFIG_ZERO_BOOTDELAY_CHECK
 
 /* switch debug port to normal uart */
 #define CONFIG_SWITCH_DEBUG_PORT_TO_UART
