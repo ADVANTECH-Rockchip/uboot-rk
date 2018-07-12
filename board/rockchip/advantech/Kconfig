@@ -11,7 +11,7 @@ config SYS_BOARD
 config SYS_VENDOR
 	default "rockchip"
 
-if PLAT_EBCRB03A1_2G
+if PLAT_EBCRB03A1_2G || PLAT_EBCRB03A2_2G
 
 config SYS_CONFIG_NAME
 	default "rk3288_ebcrb03"
