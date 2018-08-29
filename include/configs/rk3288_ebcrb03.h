@@ -21,7 +21,6 @@
 /* reserve iomap memory. */
 #define CONFIG_MAX_MEM_ADDR		0xFE000000
 
-
 /*
  * 		define uboot loader addr.
  * notice: CONFIG_SYS_TEXT_BASE must be an immediate,
@@ -77,6 +76,7 @@
 #define CONFIG_ENV_OVERWRITE
 #define CONFIG_MAC_IN_SPI
 #define CONFIG_SPI_MAC_OFFSET (896*1024)
+#define CONFIG_DP83867_PHY_ID
 
 /*SPI*/
 #define CONFIG_SPI_FLASH

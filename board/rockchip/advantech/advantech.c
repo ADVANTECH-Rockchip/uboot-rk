@@ -92,6 +92,11 @@ int board_early_init_f(void)
 	}
 #endif
 
+	/* pull disable to fix 83867 phy address*/
+#ifdef CONFIG_DP83867_PHY_ID
+	grf_writel((3 << 28) | (3 << 20), GRF_GPIO3D_P);
+#endif
+
 #ifdef CONFIG_RESET_PMIC_GPIO
 	if(SYS_LOADER_REBOOT_FLAG == IReadLoaderFlag())
 	{
