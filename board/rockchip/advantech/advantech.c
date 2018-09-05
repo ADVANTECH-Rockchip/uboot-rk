@@ -88,7 +88,7 @@ int board_early_init_f(void)
 	if (gpio_get_value(DEBUG_SWITCH_GPIO) == DEBUG_SWITCH_GPIO_ACTIVE) {
 		gd->flags |= GD_FLG_DISABLE_CONSOLE;
 		//reconfig iomux to defalt gpio
-		grf_writel((3 << 28) | (3 << 24), GRF_GPIO7CH_IOMUX);
+		grf_writel((7 << 28) | (3 << 24), GRF_GPIO7CH_IOMUX);
 	}
 #endif
 
