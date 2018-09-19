@@ -25,6 +25,13 @@ config SYS_CONFIG_NAME
 
 endif
 
+if PLAT_USC130160A1_2G
+
+config SYS_CONFIG_NAME
+	default "rk3288_usc130160"
+
+endif
+
 endif
 
 endif
