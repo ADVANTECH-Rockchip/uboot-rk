@@ -529,9 +529,11 @@ void lcd_ctrl_init(void *lcdbase)
 #endif
 	panel_info.real_freq = rkclk_lcdc_clk_set(panel_info.lcdc_id,
 						  panel_info.vl_freq);
+#ifdef CONFIG_RK32_FB
 	rk_lcdc_init(panel_info.lcdc_id);
 
 	rk_lcdc_load_screen(&panel_info);
+#endif
 
 #if defined(CONFIG_RK1000_TVE)
 #if defined(CONFIG_RK_HDMI)
@@ -558,12 +560,16 @@ void lcd_enable(void)
 
 void lcd_pandispaly(struct fb_dsp_info *info)
 {
+#ifdef CONFIG_RK32_FB
 	rk_lcdc_set_par(info, &panel_info);
+#endif
 }
 
 void lcd_standby(int enable)
 {
+#ifdef CONFIG_RK32_FB
 	rk_lcdc_standby(enable);
+#endif
 }
 
 /* dummy function */

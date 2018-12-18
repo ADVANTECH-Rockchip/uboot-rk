@@ -1,0 +1,44 @@
+if ROCKCHIP_ARCH32
+
+config ARCH_ADVANTECH
+	bool "Support Advantech platform"
+
+if ARCH_ADVANTECH
+
+config SYS_BOARD
+	default "advantech"
+
+config SYS_VENDOR
+	default "rockchip"
+
+if PLAT_EBCRB03A1_2G || PLAT_EBCRB03A2_2G
+
+config SYS_CONFIG_NAME
+	default "rk3288_ebcrb03"
+
+endif
+
+if PLAT_RSB4680A1_2G || PLAT_RSB4680A2_2G || PLAT_RSB4680A3_2G
+
+config SYS_CONFIG_NAME
+	default "rk3288_rsb4680"
+
+endif
+
+if PLAT_USM110A2_2G
+
+config SYS_CONFIG_NAME
+	default "rk3288_usm110"
+
+endif
+
+if PLAT_USC130160A1_2G
+
+config SYS_CONFIG_NAME
+	default "rk3288_usc130160"
+
+endif
+
+endif
+
+endif

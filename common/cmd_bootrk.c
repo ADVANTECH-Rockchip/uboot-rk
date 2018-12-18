@@ -623,6 +623,11 @@ int do_bootrk(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 	const disk_partition_t* ptn = NULL;
 	bootm_headers_t images;
 	bool charge = false;
+#ifdef CONFIG_ARCH_ADVANTECH
+	char command_line[1024],*e,*p;
+	uint len;
+	int node;
+#endif
 
 	if (argc >= 2) {
 		if (!strcmp(argv[1], "charge")) {
@@ -680,7 +685,84 @@ int do_bootrk(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 #endif
 
 	rk_commandline_setenv(boot_source, hdr, charge);
+#ifdef CONFIG_ARCH_ADVANTECH
+	if(getenv("switch_debug")){
+		memset(command_line,0,sizeof(command_line));
+		p = getenv("bootargs");
+		e = p;
+		p = strstr(p,"console=");
+		memcpy(command_line,e,p-e);
+		snprintf(command_line, sizeof(command_line),
+					"%sconsole=%s", command_line, "/dev/null");
+		len = strlen(command_line);
+		p = strstr(p," ");
+		e = p;
+		p = strstr(p,"androidboot.console=");
+		memcpy(command_line+len,e,p-e);
+		snprintf(command_line, sizeof(command_line),
+					"%sandroidboot.console=%s", command_line, "/dev/null");
+		len = strlen(command_line);
+		p = strstr(p," ");
+		memcpy(command_line+len,p,strlen(p));
+		setenv("bootargs", command_line);		
+	} else {
+		//enable ttyFIQ
+		node = fdt_path_offset(images.ft_addr, "/fiq-debugger");
+		if(node)
+			fdt_setprop(images.ft_addr, node, "status", "okay", sizeof("okay"));
+	}
 
+	e = getenv("bootargs");
+	memset(command_line,0,sizeof(command_line));
+	memcpy(command_line,e,strlen(e));
+
+	p = getenv("prmry_screen");
+	e = getenv("extend_screen");
+	if(p && e) {
+		strcat(command_line, " prmry_screen=");
+		strcat(command_line, p);
+		strcat(command_line, " extend_screen=");
+		strcat(command_line, e);
+		setenv("bootargs", command_line);
+
+		//enable hdmi
+		if(!memcmp(p,"hdmi",4) || !memcmp(e,"hdmi",4)) {
+			node = fdtdec_get_alias_node(images.ft_addr, "hdmi");
+			if(node > 0)
+				fdt_setprop(images.ft_addr, node, "status", "okay",sizeof("okay"));
+		}
+
+		//enable edp
+		if(!memcmp(p,"edp",3) || !memcmp(e,"edp",3)) {
+			node = fdtdec_get_alias_node(images.ft_addr, "edp");
+			if(node > 0)
+				fdt_setprop(images.ft_addr, node, "status", "okay",sizeof("okay"));
+			node = fdtdec_get_alias_node(images.ft_addr, "edp_phy");
+			if(node > 0)
+				fdt_setprop(images.ft_addr, node, "status", "okay",sizeof("okay"));
+			node = fdt_path_offset(images.ft_addr, "/edp_panel");
+			if(node > 0)
+				fdt_setprop(images.ft_addr, node, "status", "okay",sizeof("okay"));
+		}
+
+		//enable lvds
+		if(!memcmp(p,"lvds",4) || !memcmp(e,"lvds",4)) {
+			node = fdtdec_get_alias_node(images.ft_addr, "lvds");
+			if(node > 0)
+				fdt_setprop(images.ft_addr, node, "status", "okay",sizeof("okay"));
+			node = fdt_path_offset(images.ft_addr, "/lvds_panel");
+			if(node > 0)
+				fdt_setprop(images.ft_addr, node, "status", "okay",sizeof("okay"));
+			if(!memcmp(p,"hdmi",4) || !memcmp(e,"hdmi",4))
+				node = fdtdec_get_alias_node(images.ft_addr, "lvds_in_vopl");
+			else
+				node = fdtdec_get_alias_node(images.ft_addr, "lvds_in_vopb");
+			if(node > 0)
+				fdt_setprop(images.ft_addr, node, "status", "okay",sizeof("okay"));
+		}
+	}
+#endif
+	
 	/* Secure boot state will set drm, sn and others information in the nanc ram,
 	 * so, after set, PLS notice do not read/write nand flash.
 	 */

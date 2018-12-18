@@ -136,12 +136,12 @@ static int rk_bl_parse_dt(const void *blob)
 	bl.node = fdt_node_offset_by_compatible(blob,
 					0, COMPAT_ROCKCHIP_BL);
 	if (bl.node < 0) {
-		debug("can't find dts node for backlight\n");
+		printf("can't find dts node for backlight\n");
 		bl.status = 0;
 		return -ENODEV;
 	}
 	if (!fdt_device_is_available(blob, bl.node)) {
-		debug("device backlight is disabled\n");
+		printf("device backlight is disabled\n");
 		bl.status = 0;
 		return -EPERM;
 	}
@@ -152,7 +152,7 @@ static int rk_bl_parse_dt(const void *blob)
 						ARRAY_SIZE(data));
 	if (fdtdec_get_int_array(blob, bl.node, "pwms", data,
 			arg_counts)) {
-		debug("Cannot decode PWM property pwms\n");
+		printf("Cannot decode PWM property pwms\n");
 		bl.status = 0;
 		return -ENODEV;
 	}

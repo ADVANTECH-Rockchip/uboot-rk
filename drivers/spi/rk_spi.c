@@ -95,7 +95,11 @@ static void rkspi_cs_control(struct rk_spi_slave *spi, uint32 cs, u8 flag)
 
 static void rkspi_iomux_init(unsigned int bus, unsigned int cs)
 {
+#ifdef CONFIG_ARCH_ADVANTECH
+	rk_iomux_config(RK_SPI0_CS0_IOMUX+2*bus+cs);
+#else
     rk_spi_iomux_config(RK_SPI0_CS0_IOMUX+2*bus+cs);
+#endif
 }
 
 static int rkspi_null_writer(struct rk_spi_slave *spi)
@@ -128,6 +132,7 @@ static int rkspi_null_reader(struct rk_spi_slave *spi)
 
 static int rkspi_u8_writer(struct rk_spi_slave *spi)
 {	
+#ifndef CONFIG_ARCH_ADVANTECH
 	rkspi_dump_regs(spi);
 
 	if ((rkspi_readw(spi, SPI_SR) & SR_TF_FULL)
@@ -136,12 +141,24 @@ static int rkspi_u8_writer(struct rk_spi_slave *spi)
 
 	rkspi_writew(spi, SPI_TXDR, *(u8 *)(spi->tx));
 	++spi->tx;
+#else
+	if (rkspi_readw(spi, SPI_SR) & SR_TF_FULL)
+		return 0;
+	if(spi->tx && (spi->tx == spi->tx_end))
+		return 0;
+	if(spi->tx) {
+		rkspi_writew(spi, SPI_TXDR, *(u8 *)(spi->tx));
+		++spi->tx;
+	} else
+		rkspi_writew(spi, SPI_TXDR, 0);
+#endif
 
 	return 1;
 }
 
 static int rkspi_u8_reader(struct rk_spi_slave *spi)
 {
+#ifndef CONFIG_ARCH_ADVANTECH
 	rkspi_dump_regs(spi);
 
 	while (!(rkspi_readw(spi, SPI_SR) & SR_RF_EMPT)
@@ -153,6 +170,26 @@ static int rkspi_u8_reader(struct rk_spi_slave *spi)
 	rkspi_wait_till_not_busy(spi);
 
 	return spi->rx == spi->rx_end;
+#else
+	while (!(rkspi_readw(spi, SPI_SR) & SR_RF_EMPT)) {
+		if(spi->rx && (spi->rx < spi->rx_end)) {
+			*(u8 *)(spi->rx) = rkspi_readw(spi, SPI_RXDR) & 0xFFU;
+			++spi->rx;
+			--spi->len;
+		} else if(!spi->rx) {
+			rkspi_readw(spi, SPI_RXDR);
+			--spi->len;
+			if(!spi->len)
+				break;
+		}
+		else
+			break;
+	}
+
+	rkspi_wait_till_not_busy(spi);
+
+	return spi->rx == spi->rx_end;
+#endif
 }
 
 static int rkspi_u16_writer(struct rk_spi_slave *spi)
@@ -214,11 +251,14 @@ static inline void rkspi_io_config(struct rk_spi_slave *spi, unsigned int len, c
 	if (spi->tx == NULL && spi->rx == NULL) {
 		spi->read = rkspi_null_reader;
 		spi->write = rkspi_null_writer;
-	} else if (spi->tx == NULL) {
+	}
+#ifndef CONFIG_ARCH_ADVANTECH
+	else if (spi->tx == NULL) {
 		spi->write = rkspi_null_writer;
 	} else if (spi->rx == NULL) {
 		spi->read = rkspi_null_reader;
 	}
+#endif
 
 	rkspi_writew(spi, SPI_CTRLR1, len-1);
 }
@@ -227,10 +267,28 @@ static inline void rkspi_io_config(struct rk_spi_slave *spi, unsigned int len, c
 static int rkspi_xfer_pio(struct rk_spi_slave *spi, unsigned int len,
 			const void *dout, void *din, unsigned long flags)
 {
+#ifndef CONFIG_ARCH_ADVANTECH
 	spi->tx = (void *)dout;
 	spi->tx_end = spi->tx + len;
 	spi->rx = (void *)din;
 	spi->rx_end = spi->rx + len;
+#else
+	if(dout) {
+		spi->tx = (void *)dout;
+		spi->tx_end = spi->tx + len;
+	} else {
+		spi->tx = NULL;
+		spi->tx_end = NULL;
+	}
+	if(din) {
+		spi->rx = (void *)din;
+		spi->rx_end = spi->rx + len;
+	} else {
+		spi->rx = NULL;
+		spi->rx_end = NULL;
+	}
+	spi->len = len;
+#endif
 
 	rkspi_io_config(spi, len, dout, din);
 
@@ -244,6 +302,10 @@ static int rkspi_xfer_pio(struct rk_spi_slave *spi, unsigned int len,
 	while (spi->write(spi)) {
 		rkspi_wait_till_not_busy(spi);
 		spi->read(spi);
+#ifdef CONFIG_ARCH_ADVANTECH
+		if(!spi->len)
+			break;
+#endif
 	}
 
 	/* Deassert CS after transfer */
@@ -357,6 +419,10 @@ struct spi_slave *spi_setup_slave(unsigned int bus, unsigned int cs,
 	spi->read = rkspi_null_reader;
 	spi->write = rkspi_null_writer;
 
+#ifdef CONFIG_ARCH_ADVANTECH
+	spi->slave.cs = cs;
+#endif
+
 	return &spi->slave;
 }
 
@@ -405,9 +471,17 @@ int spi_claim_bus(struct spi_slave *slave)
 
 	/* set SPI mode 0..3 */
 	if (spi->mode & SPI_CPOL)
+#ifdef CONFIG_ARCH_ADVANTECH
+		ctrlr0 |= (SPI_SCOL_HIGH << SPI_SCOL_OFFSET);
+#else
 		ctrlr0 = (SPI_SCOL_HIGH << SPI_SCOL_OFFSET);
+#endif
 	if (spi->mode & SPI_CPHA)
+#ifdef CONFIG_ARCH_ADVANTECH
+		ctrlr0 |= (SPI_SCPH_TOGSTA << SPI_SCPH_OFFSET);
+#else
 		ctrlr0 = (SPI_SCPH_TOGSTA << SPI_SCPH_OFFSET);
+#endif
 
 	/* Chip Select Mode */
 	ctrlr0 |= (SPI_CSM_KEEP << SPI_CSM_OFFSET);

@@ -14,6 +14,26 @@ config PLAT_RK30XX
 	bool "rk30xx platform"
 	select ROCKCHIP
 
+config PLAT_RSB4680A3_2G
+	bool "Support rk3288 rsb4680a102-1 2G"
+	select ROCKCHIP
+	select ARCH_ADVANTECH
+
+config PLAT_EBCRB03A2_2G
+	bool "Support rk3288 ebcrb03a102-1 2G"
+	select ROCKCHIP
+	select ARCH_ADVANTECH
+
+config PLAT_USM110A2_2G
+	bool "Support rk3288 usm110a102-1 2G"
+	select ROCKCHIP
+	select ARCH_ADVANTECH
+
+config PLAT_USC130160A1_2G
+	bool "Support rk3288 usc130160a101-1 2G"
+	select ROCKCHIP
+	select ARCH_ADVANTECH
+
 endchoice
 
 
@@ -27,4 +47,5 @@ source "board/rockchip/rk32xx/Kconfig"
 
 source "board/rockchip/common/Kconfig"
 
+source "board/rockchip/advantech/Kconfig"
 endif
