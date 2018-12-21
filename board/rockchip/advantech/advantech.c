@@ -231,8 +231,9 @@ static void board_init_adjust_env(void)
 static void clear_rtc_irq_status(void)
 {
 	u8 buf=0;
-	i2c_set_bus_num(CONFIG_RTC_I2C_BUS);
+
 #ifdef CONFIG_RTC_S35390A
+	i2c_set_bus_num(CONFIG_RTC_I2C_BUS);
 	i2c_init(100000, CONFIG_S35390A_ADDR);
 	/* disable interrupt */
 	i2c_write(CONFIG_S35390A_ADDR+1, 0, 0, &buf, 1);
@@ -304,8 +305,8 @@ int board_late_init(void)
 #endif
 
 #ifdef CONFIG_RK_POWER
-	debug("fixed_init\n");
-	fixed_regulator_init();
+	//debug("fixed_init\n");
+	//fixed_regulator_init();
 	debug("pmic_init\n");
 	pmic_init(0);
 #if defined(CONFIG_POWER_PWM_REGULATOR)

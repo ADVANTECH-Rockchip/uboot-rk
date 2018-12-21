@@ -255,7 +255,8 @@
 #define CONFIG_I2C_EDID
 #endif
 
-/*#define CONFIG_RK_HDMI*/
+/*#define CONFIG_RK32_FB*/
+
 #ifdef CONFIG_RK_HDMI
 #define CONFIG_RK_HDMIV2
 #endif
@@ -290,13 +291,12 @@
 #endif /* CONFIG_UBOOT_CHARGE */
 
 /* more config for power */
-#define CONFIG_POWER_RK808
 #ifdef CONFIG_RK_POWER
-#undef CONFIG_RK_POWER
+
+#ifdef CONFIG_RK_KEY
 #undef CONFIG_RK_KEY
 #endif
 
-#if 0
 #define CONFIG_POWER
 #define CONFIG_POWER_I2C
 
@@ -331,7 +331,6 @@
 #undef CONFIG_BATTERY_RICOH619
 #endif /* CONFIG_POWER_BAT */
 
-#undef CONFIG_RK_KEY
 #endif /* CONFIG_RK_POWER */
 
 #endif /* __RK3288_EBCRB03_CONFIG_H */
