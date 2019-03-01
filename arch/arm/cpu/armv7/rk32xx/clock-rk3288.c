@@ -270,7 +270,14 @@ static int rkclk_pll_set_rate(enum rk_plls_id pll_id, uint32 mHz, pll_callback_f
 	/* enter rest */
 	cru_writel((PLL_RESET | PLL_RESET_W_MSK), PLL_CONS(pll_id, 3));
 
+#ifdef CONFIG_ARCH_ADVANTECH
+	if (pll_id == GPLL_ID)
+		cru_writel(0xffff0007, PLL_CONS(pll_id, 0));
+	else
+		cru_writel(clkset->pllcon0, PLL_CONS(pll_id, 0));
+#else
 	cru_writel(clkset->pllcon0, PLL_CONS(pll_id, 0));
+#endif
 	cru_writel(clkset->pllcon1, PLL_CONS(pll_id, 1));
 #ifdef CONFIG_PRODUCT_BOX
 	if (pll_id == CPLL_ID)
@@ -278,7 +285,14 @@ static int rkclk_pll_set_rate(enum rk_plls_id pll_id, uint32 mHz, pll_callback_f
 	else
 		cru_writel(clkset->pllcon2, PLL_CONS(pll_id, 2));
 #else
+#ifdef CONFIG_ARCH_ADVANTECH
+	if (pll_id == GPLL_ID)
+		cru_writel(0x0, PLL_CONS(pll_id, 2));
+	else
+		cru_writel(clkset->pllcon2, PLL_CONS(pll_id, 2));
+#else
 	cru_writel(clkset->pllcon2, PLL_CONS(pll_id, 2));
+#endif
 #endif
 
 	clk_loop_delayus(5);
