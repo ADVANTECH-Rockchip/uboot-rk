@@ -92,9 +92,6 @@
 #define HW_BOARD_ID2	(GPIO_BANK0 | GPIO_A7)
 #endif
 
-/* UBOOT version */
-#define CONFIG_IDENT_STRING " V1.000"
-
 /* mac in spi*/
 #define CONFIG_CMD_NET
 #define CONFIG_ENV_OVERWRITE
@@ -265,8 +262,6 @@
 #define CONFIG_RK1000_TVE
 #undef CONFIG_GM7122_TVE
 #endif
-
-#define CONFIG_RK32_DSI
 
 #undef CONFIG_UBOOT_CHARGE
 
