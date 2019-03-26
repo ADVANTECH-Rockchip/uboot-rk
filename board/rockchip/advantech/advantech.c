@@ -22,9 +22,11 @@
 #include <spi_flash.h>
 
 struct boardcfg_t {
-    unsigned char mac[6];
-    unsigned char sn[10];
-    unsigned char Manufacturing_Time[14];
+    unsigned char mac[12];
+    unsigned char sn_len;
+    unsigned char *sn;
+    unsigned char time_len;
+    unsigned char *Manufactoring_Time;
 };
 #endif
 
@@ -162,14 +164,15 @@ int arch_early_init_r(void)
 static int board_info_in_spi(void)
 {
     struct spi_flash *flash;
-	uchar enetaddr[6];
+	uchar enetaddr[50];
 	u32 valid;
-
+	int sn_len,time_len;
+	
 	flash = spi_flash_probe(CONFIG_SF_DEFAULT_BUS, CONFIG_SF_DEFAULT_CS,
 				CONFIG_SF_DEFAULT_SPEED, CONFIG_SF_DEFAULT_MODE);
 	if (!flash)
 		return -1;
-	if(spi_flash_read(flash, CONFIG_SPI_MAC_OFFSET, 6, enetaddr)==0) {
+	if(spi_flash_read(flash, CONFIG_SPI_MAC_OFFSET, 50, enetaddr)==0) {
 		spi_flash_free(flash);
 		valid = is_valid_ether_addr(enetaddr);
 
@@ -177,6 +180,21 @@ static int board_info_in_spi(void)
 			eth_setenv_enetaddr("ethaddr", enetaddr);
 		else
 			puts("Skipped ethaddr assignment due to invalid,using default!\n");
+
+		sn_len = enetaddr[12];
+		time_len = enetaddr[13+sn_len];
+		if(sn_len && (sn_len != 0xff)) {
+			enetaddr[13+sn_len] = '\0';
+			setenv("androidboot.serialno", &enetaddr[13]);
+			if(time_len && (time_len != 0xff)) {
+				enetaddr[14+sn_len+time_len] = '\0';
+				setenv("androidboot.factorytime", &enetaddr[14+sn_len]);
+			}else
+				setenv("androidboot.factorytime", NULL);
+		} else {
+			setenv("androidboot.serialno", NULL);
+			setenv("androidboot.factorytime", NULL);
+		}
 	} else
 		return -1;
 }

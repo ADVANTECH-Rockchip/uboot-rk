@@ -587,6 +587,24 @@ int do_bootrk(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 		setenv("bootargs", command_line);
 	}
 
+	if(getenv("androidboot.serialno")){
+		e = getenv("bootargs");
+		memset(command_line,0,sizeof(command_line));
+		memcpy(command_line,e,strlen(e));
+		strcat(command_line, " androidboot.serialno=");
+		strcat(command_line, getenv("androidboot.serialno"));
+		setenv("bootargs", command_line);
+	}
+
+	if(getenv("androidboot.factorytime")){
+		e = getenv("bootargs");
+		memset(command_line,0,sizeof(command_line));
+		memcpy(command_line,e,strlen(e));
+		strcat(command_line, " androidboot.factorytime=");
+		strcat(command_line, getenv("androidboot.factorytime"));
+		setenv("bootargs", command_line);
+	}
+	
 	e = getenv("bootargs");
 	memset(command_line,0,sizeof(command_line));
 	memcpy(command_line,e,strlen(e));
