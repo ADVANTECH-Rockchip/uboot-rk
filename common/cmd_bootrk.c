@@ -510,7 +510,7 @@ int do_bootrk(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 	bootm_headers_t images;
 	bool charge = false;
 #ifdef CONFIG_ARCH_ADVANTECH
-	char command_line[1024],*e,*p;
+	char command_line[1024],*e,*p,*m;
 	uint len;
 	fdt32_t value;
 	int nodeoffset;
@@ -604,6 +604,30 @@ int do_bootrk(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 		strcat(command_line, getenv("androidboot.factorytime"));
 		setenv("bootargs", command_line);
 	}
+
+	m = fdt_getprop(images.ft_addr, 0, "model", NULL);
+	if(m){
+		memset(command_line,0,sizeof(command_line));
+		p = getenv("hwversion");
+		if(p){
+			e = strstr(m," ");
+			memcpy(command_line,m,e-m);
+			strcat(command_line, " ");
+			strcat(command_line, p);
+		} else {
+			e = strrchr(m,' ');
+			memcpy(command_line,m,e-m);
+		}
+		e = getenv("swversion");
+		if(e){
+			strcat(command_line, " ");
+			strcat(command_line, e);
+		}
+
+		if(p || e)
+			fdt_setprop(images.ft_addr, 0, "model", command_line,strlen(command_line)+1);
+	}else
+		printf("can't find model node\n");
 	
 	e = getenv("bootargs");
 	memset(command_line,0,sizeof(command_line));

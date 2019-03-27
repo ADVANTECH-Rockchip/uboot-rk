@@ -128,7 +128,7 @@ int checkboard(void)
 	ver = (ver<<1) | gpio_get_value(HW_BOARD_ID1);
 	ver = (ver<<1) | gpio_get_value(HW_BOARD_ID0);
 #endif
-	printf("Board:Advantech %s Board,HW version:%d\n",CONFIG_SYS_CONFIG_NAME,ver);
+	printf("Board:Advantech %s Board,HW version:%x\n",CONFIG_SYS_CONFIG_NAME,ver);
 #ifdef CONFIG_SECOND_LEVEL_BOOTLOADER
 	printf("Uboot as second level loader\n");
 #endif
@@ -221,6 +221,29 @@ static void board_info_config()
 			printf("error allocating blksz(%lu) buffer\n", blksz);
 	} else
 		printf("failed to get %s partition\n",BOARD_INFO_NAME);
+}
+
+static int board_version_config(void)
+{
+	unsigned char version[10];
+	unsigned char ver=0;
+
+#ifdef CONFIG_DISPLAY_BOARD_ID
+	ver = gpio_get_value(HW_BOARD_ID2);
+	ver = (ver<<1) | gpio_get_value(HW_BOARD_ID1);
+	ver = (ver<<1) | gpio_get_value(HW_BOARD_ID0);
+
+	version[0]='V';
+	version[1]=((ver&0x4)>>2)+'0';
+	version[2]=((ver&0x2)>>1)+'0';
+	version[3]=(ver&0x1)+'0';
+	version[4]='\0';
+	setenv("hwversion",version);
+#endif
+	memset(version,0,sizeof(version));
+	snprintf(version,sizeof(version),"%s",strrchr(PLAIN_VERSION,'V'));
+	if(version[0]=='V')
+		setenv("swversion",version);
 }
 
 #define RAMDISK_ZERO_COPY_SETTING	"0xffffffff=n\0"
@@ -340,6 +363,8 @@ int board_late_init(void)
 #else
 	board_info_config();
 #endif
+
+	board_version_config();
 	return 0;
 }
 #endif
