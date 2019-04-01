@@ -27,6 +27,8 @@ struct boardcfg_t {
     unsigned char *sn;
     unsigned char time_len;
     unsigned char *Manufactoring_Time;
+    unsigned char info_len;
+    unsigned char *guest_info;
 };
 #endif
 
@@ -166,7 +168,7 @@ static int board_info_in_spi(void)
     struct spi_flash *flash;
 	uchar enetaddr[50];
 	u32 valid;
-	int sn_len,time_len;
+	int sn_len,time_len,info_len;
 	
 	flash = spi_flash_probe(CONFIG_SF_DEFAULT_BUS, CONFIG_SF_DEFAULT_CS,
 				CONFIG_SF_DEFAULT_SPEED, CONFIG_SF_DEFAULT_MODE);
@@ -183,17 +185,24 @@ static int board_info_in_spi(void)
 
 		sn_len = enetaddr[12];
 		time_len = enetaddr[13+sn_len];
+		info_len = enetaddr[14+sn_len+time_len];
 		if(sn_len && (sn_len != 0xff)) {
 			enetaddr[13+sn_len] = '\0';
-			setenv("androidboot.serialno", &enetaddr[13]);
+			setenv("boardsn", &enetaddr[13]);
 			if(time_len && (time_len != 0xff)) {
 				enetaddr[14+sn_len+time_len] = '\0';
 				setenv("androidboot.factorytime", &enetaddr[14+sn_len]);
+				if(info_len && (info_len != 0xff)) {
+					enetaddr[15+sn_len+time_len+info_len] = '\0';
+					setenv("androidboot.serialno", &enetaddr[15+sn_len+time_len]);
+				}else
+					setenv("androidboot.serialno", NULL);
 			}else
 				setenv("androidboot.factorytime", NULL);
 		} else {
-			setenv("androidboot.serialno", NULL);
+			setenv("boardsn", NULL);
 			setenv("androidboot.factorytime", NULL);
+			setenv("androidboot.serialno", NULL);
 		}
 	} else
 		return -1;
@@ -228,22 +237,12 @@ static int board_version_config(void)
 	unsigned char version[10];
 	unsigned char ver=0;
 
-#ifdef CONFIG_DISPLAY_BOARD_ID
-	ver = gpio_get_value(HW_BOARD_ID2);
-	ver = (ver<<1) | gpio_get_value(HW_BOARD_ID1);
-	ver = (ver<<1) | gpio_get_value(HW_BOARD_ID0);
-
-	version[0]='V';
-	version[1]=((ver&0x4)>>2)+'0';
-	version[2]=((ver&0x2)>>1)+'0';
-	version[3]=(ver&0x1)+'0';
-	version[4]='\0';
-	setenv("hwversion",version);
-#endif
 	memset(version,0,sizeof(version));
 	snprintf(version,sizeof(version),"%s",strrchr(PLAIN_VERSION,'V'));
 	if(version[0]=='V')
 		setenv("swversion",version);
+	else
+		setenv("swversion",NULL);
 }
 
 #define RAMDISK_ZERO_COPY_SETTING	"0xffffffff=n\0"
