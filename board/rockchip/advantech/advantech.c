@@ -363,7 +363,7 @@ int board_late_init(void)
 	board_info_config();
 #endif
 
-	board_version_config();
+	//board_version_config();
 	return 0;
 }
 #endif

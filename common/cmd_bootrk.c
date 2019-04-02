@@ -618,6 +618,7 @@ int do_bootrk(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 		} else {
 			strcat(command_line, " unknown");
 		}
+		#if 0
 		e = getenv("swversion");
 		if(e){
 			strcat(command_line, " ");
@@ -626,6 +627,10 @@ int do_bootrk(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 			e = strrchr(m,' ');
 			strcat(command_line, e);
 		}
+		#else
+		e = strrchr(m,' ');
+		strcat(command_line, e);
+		#endif
 
 		fdt_setprop(images.ft_addr, 0, "model", command_line,strlen(command_line)+1);
 	}else
