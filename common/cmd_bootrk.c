@@ -624,7 +624,7 @@ int do_bootrk(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 	bootm_headers_t images;
 	bool charge = false;
 #ifdef CONFIG_ARCH_ADVANTECH
-	char command_line[1024],*e,*p;
+	char command_line[1024],*e,*p,*m;
 	uint len;
 	int node;
 #endif
@@ -711,6 +711,55 @@ int do_bootrk(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 		if(node)
 			fdt_setprop(images.ft_addr, node, "status", "okay", sizeof("okay"));
 	}
+
+	if(getenv("androidboot.serialno")){
+		e = getenv("bootargs");
+		memset(command_line,0,sizeof(command_line));
+		memcpy(command_line,e,strlen(e));
+		strcat(command_line, " androidboot.serialno=");
+		strcat(command_line, getenv("androidboot.serialno"));
+		setenv("bootargs", command_line);
+	}
+
+	if(getenv("androidboot.factorytime")){
+		e = getenv("bootargs");
+		memset(command_line,0,sizeof(command_line));
+		memcpy(command_line,e,strlen(e));
+		strcat(command_line, " androidboot.factorytime=");
+		strcat(command_line, getenv("androidboot.factorytime"));
+		setenv("bootargs", command_line);
+	}
+
+	m = fdt_getprop(images.ft_addr, 0, "model", NULL);
+	if(m){
+		memset(command_line,0,sizeof(command_line));
+
+		p = getenv("boardsn");
+		e = strstr(m," ");
+		memcpy(command_line,m,e-m);
+		if(p){
+			strcat(command_line, " ");
+			strcat(command_line, p);
+		} else {
+			strcat(command_line, " unknown");
+		}
+		#if 0
+		e = getenv("swversion");
+		if(e){
+			strcat(command_line, " ");
+			strcat(command_line, e);
+		} else {
+			e = strrchr(m,' ');
+			strcat(command_line, e);
+		}
+		#else
+		e = strrchr(m,' ');
+		strcat(command_line, e);
+		#endif
+
+		fdt_setprop(images.ft_addr, 0, "model", command_line,strlen(command_line)+1);
+	}else
+		printf("can't find model node\n");
 
 	e = getenv("bootargs");
 	memset(command_line,0,sizeof(command_line));

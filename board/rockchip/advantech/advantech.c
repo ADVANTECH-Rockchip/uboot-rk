@@ -25,9 +25,13 @@
 #include <spi_flash.h>
 
 struct boardcfg_t {
-    unsigned char mac[6];
-    unsigned char sn[10];
-    unsigned char Manufacturing_Time[14];
+    unsigned char mac[12];
+    unsigned char sn_len;
+    unsigned char *sn;
+    unsigned char time_len;
+    unsigned char *Manufactoring_Time;
+    unsigned char info_len;
+    unsigned char *guest_info;
 };
 #endif
 
@@ -165,14 +169,15 @@ int arch_early_init_r(void)
 static int board_info_in_spi(void)
 {
     struct spi_flash *flash;
-	uchar enetaddr[6];
+	uchar enetaddr[50];
 	u32 valid;
+	int sn_len,time_len,info_len;
 
 	flash = spi_flash_probe(CONFIG_SF_DEFAULT_BUS, CONFIG_SF_DEFAULT_CS,
 				CONFIG_SF_DEFAULT_SPEED, CONFIG_SF_DEFAULT_MODE);
 	if (!flash)
 		return -1;
-	if(spi_flash_read(flash, CONFIG_SPI_MAC_OFFSET, 6, enetaddr)==0) {
+	if(spi_flash_read(flash, CONFIG_SPI_MAC_OFFSET, 50, enetaddr)==0) {
 		spi_flash_free(flash);
 		valid = is_valid_ether_addr(enetaddr);
 
@@ -180,12 +185,47 @@ static int board_info_in_spi(void)
 			eth_setenv_enetaddr("ethaddr", enetaddr);
 		else
 			puts("Skipped ethaddr assignment due to invalid,using default!\n");
+
+		sn_len = enetaddr[12];
+		time_len = enetaddr[13+sn_len];
+		info_len = enetaddr[14+sn_len+time_len];
+		if(sn_len && (sn_len != 0xff)) {
+			enetaddr[13+sn_len] = '\0';
+			setenv("boardsn", &enetaddr[13]);
+			if(time_len && (time_len != 0xff)) {
+				enetaddr[14+sn_len+time_len] = '\0';
+				setenv("androidboot.factorytime", &enetaddr[14+sn_len]);
+				if(info_len && (info_len != 0xff)) {
+					enetaddr[15+sn_len+time_len+info_len] = '\0';
+					setenv("androidboot.serialno", &enetaddr[15+sn_len+time_len]);
+				}else
+					setenv("androidboot.serialno", NULL);
+			}else
+				setenv("androidboot.factorytime", NULL);
+		} else {
+			setenv("boardsn", NULL);
+			setenv("androidboot.factorytime", NULL);
+			setenv("androidboot.serialno", NULL);
+		}
 	} else
 		return -1;
 
 	return 0;
 }
 #endif 
+
+static int board_version_config(void)
+{
+	unsigned char version[10];
+	unsigned char ver=0;
+
+	memset(version,0,sizeof(version));
+	snprintf(version,sizeof(version),"%s",strrchr(PLAIN_VERSION,'V'));
+	if(version[0]=='V')
+		setenv("swversion",version);
+	else
+		setenv("swversion",NULL);
+}
 
 #define RAMDISK_ZERO_COPY_SETTING	"0xffffffff=n\0"
 static void board_init_adjust_env(void)
@@ -353,6 +393,8 @@ int board_late_init(void)
 #ifdef CONFIG_MAC_IN_SPI
 	board_info_in_spi();
 #endif
+
+	//board_version_config();
 	return 0;
 }
 #endif
