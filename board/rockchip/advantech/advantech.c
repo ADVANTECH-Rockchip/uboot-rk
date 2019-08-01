@@ -289,7 +289,7 @@ static void adv_parse_drm_env(void)
 	int use_dts_screen=0;
 	int phandle;
 
-	node = fdt_path_offset(gd->fdt_blob, "/display-subsystem");
+	node = fdt_path_offset(gd->fdt_blob, "/display-timings");
 	use_dts_screen = fdtdec_get_int(gd->fdt_blob, node, "use-dts-screen", 0);
 	if(!use_dts_screen || getenv("use_env_screen")){
 		p = getenv("prmry_screen");
