@@ -375,6 +375,12 @@ int board_late_init(void)
 	/* Secure boot check after idb data get */
 	SecureBootCheck();
 
+	adv_parse_drm_env();
+#ifdef CONFIG_MAC_IN_SPI
+	board_info_in_spi();
+#endif
+	//board_version_config();
+
 	if (rkidb_get_bootloader_ver() == 0) {
 		printf("\n#Boot ver: %s\n", bootloader_ver);
 	}
@@ -389,12 +395,6 @@ int board_late_init(void)
 	debug("fbt preboot\n");
 	board_fbt_preboot();
 
-	adv_parse_drm_env();
-#ifdef CONFIG_MAC_IN_SPI
-	board_info_in_spi();
-#endif
-
-	//board_version_config();
 	return 0;
 }
 #endif

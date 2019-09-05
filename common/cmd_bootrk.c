@@ -750,7 +750,9 @@ int do_bootrk(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 			strcat(command_line, " ");
 			strcat(command_line, p);
 		} else {
-			strcat(command_line, " unknown");
+			//strcat(command_line, " unknown");
+			e = strrchr(m,' ');
+			memcpy(command_line,m,e-m);
 		}
 		#if 0
 		e = getenv("swversion");
