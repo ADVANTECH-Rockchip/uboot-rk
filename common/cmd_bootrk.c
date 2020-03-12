@@ -712,12 +712,21 @@ int do_bootrk(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 			fdt_setprop(images.ft_addr, node, "status", "okay", sizeof("okay"));
 	}
 
-   if(getenv("fix_dual_camera_index")){
+   if(getenv("fix_camera_index0")){
        e = getenv("bootargs");
        memset(command_line,0,sizeof(command_line));
        memcpy(command_line,e,strlen(e));
-       strcat(command_line, " fix_dual_camera_index=");
-       strcat(command_line, getenv("fix_dual_camera_index"));
+       strcat(command_line, " fix_camera_index0=");
+       strcat(command_line, getenv("fix_camera_index0"));
+       setenv("bootargs", command_line);
+   }
+
+   if(getenv("fix_camera_index1")){
+       e = getenv("bootargs");
+       memset(command_line,0,sizeof(command_line));
+       memcpy(command_line,e,strlen(e));
+       strcat(command_line, " fix_camera_index1=");
+       strcat(command_line, getenv("fix_camera_index1"));
        setenv("bootargs", command_line);
    }
 
