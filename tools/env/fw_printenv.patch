@@ -1,0 +1,189 @@
+diff --git a/Makefile b/Makefile
+index cce85fe..0d4da60 100755
+--- a/Makefile
++++ b/Makefile
+@@ -195,6 +195,9 @@ endif
+ 
+ else
+ 
++ifneq ($(wildcard ../../rk3399-android7.1/prebuilts/gcc/linux-x86/arm/gcc-linaro-6.3.1-2017.05-x86_64_arm-linux-gnueabihf),)
++CROSS_COMPILE	?= $(shell pwd)/../../rk3399-android7.1/prebuilts/gcc/linux-x86/arm/gcc-linaro-6.3.1-2017.05-x86_64_arm-linux-gnueabihf/bin/arm-linux-gnueabihf-
++endif
+ ifneq ($(wildcard ../toolchain/arm-eabi-4.8),)
+ CROSS_COMPILE   ?= $(shell pwd)/../toolchain/arm-eabi-4.8/bin/arm-eabi-
+ endif
+diff --git a/tools/env/Makefile b/tools/env/Makefile
+old mode 100644
+new mode 100755
+index 40164f7..0370a4c
+--- a/tools/env/Makefile
++++ b/tools/env/Makefile
+@@ -8,7 +8,7 @@
+ # fw_printenv is supposed to run on the target system, which means it should be
+ # built with cross tools. Although it may look weird, we only replace "HOSTCC"
+ # with "CC" here for the maximum code reuse of scripts/Makefile.host.
+-HOSTCC = $(CC)
++HOSTCC = $(CC) -static
+ 
+ # Compile for a hosted environment on the target
+ HOST_EXTRACFLAGS  = $(patsubst -I%,-idirafter%, $(filter -I%, $(UBOOTINCLUDE))) \
+diff --git a/tools/env/crc32.c b/tools/env/crc32.c
+old mode 100644
+new mode 100755
+diff --git a/tools/env/fw_env.c b/tools/env/fw_env.c
+old mode 100644
+new mode 100755
+index 30d5b03..78c7cb9
+--- a/tools/env/fw_env.c
++++ b/tools/env/fw_env.c
+@@ -33,6 +33,9 @@
+ 
+ #include <aes.h>
+ 
++typedef unsigned char uint8_t;
++typedef unsigned int uint32_t;
++
+ #define DIV_ROUND_UP(n, d)	(((n) + (d) - 1) / (d))
+ 
+ #define WHITESPACE(c) ((c == '\t') || (c == ' '))
+@@ -125,7 +128,7 @@ static int get_config (char *);
+ #endif
+ static inline ulong getenvsize (void)
+ {
+-	ulong rc = CUR_ENVSIZE - sizeof(long);
++	ulong rc = CUR_ENVSIZE - sizeof(int);
+ 
+ 	if (HaveRedundEnv)
+ 		rc -= sizeof (char);
+@@ -544,6 +547,34 @@ int fw_setenv(int argc, char *argv[])
+ 	return fw_env_close();
+ }
+ 
++/**
++ * fw_env_default() - default environment
++ *
++ * Return:
++ *  0 on success, -1 on failure (modifies errno)
++ */
++int fw_env_default(void)
++{
++	if (fw_env_open()) {
++		fprintf(stderr, "Error: environment not initialized\n");
++		return -1;
++	}
++
++	/*
++	 * Clear CRC
++	 */
++	*environment.crc = 0x00;
++
++	/* write environment back to flash */
++	if (flash_io(O_RDWR)) {
++		fprintf(stderr,
++			"Error: can't write fw_env to flash\n");
++			return -1;
++	}
++
++	return 0;
++}
++
+ /*
+  * Parse  a file  and configure the u-boot variables.
+  * The script file has a very simple format, as follows:
+diff --git a/tools/env/fw_env.config b/tools/env/fw_env.config
+old mode 100644
+new mode 100755
+index c9b9f6a..61293f4
+--- a/tools/env/fw_env.config
++++ b/tools/env/fw_env.config
+@@ -7,8 +7,8 @@
+ 
+ # NOR example
+ # MTD device name	Device offset	Env. size	Flash sector size	Number of sectors
+-/dev/mtd1		0x0000		0x4000		0x4000
+-/dev/mtd2		0x0000		0x4000		0x4000
++/dev/mtd/mtd1		0xC0000		0x200		0x10000
++#/dev/mtd2		0x0000		0x4000		0x4000
+ 
+ # MTD SPI-dataflash example
+ # MTD device name	Device offset	Env. size	Flash sector size	Number of sectors
+diff --git a/tools/env/fw_env.h b/tools/env/fw_env.h
+old mode 100644
+new mode 100755
+index aff471b..112cbdc
+--- a/tools/env/fw_env.h
++++ b/tools/env/fw_env.h
+@@ -6,6 +6,8 @@
+  */
+ 
+ /* Pull in the current config to define the default environment */
++#include <linux/kconfig.h>
++
+ #ifndef __ASSEMBLY__
+ #define __ASSEMBLY__ /* get only #defines from config.h */
+ #include <config.h>
+@@ -55,6 +57,7 @@
+ extern int   fw_printenv(int argc, char *argv[]);
+ extern char *fw_getenv  (char *name);
+ extern int fw_setenv  (int argc, char *argv[]);
++extern int fw_env_default(void);
+ extern int fw_parse_script(char *fname);
+ extern int fw_env_open(void);
+ extern int fw_env_write(char *name, char *value);
+diff --git a/tools/env/fw_env_main.c b/tools/env/fw_env_main.c
+old mode 100644
+new mode 100755
+index ce50d58..63b942a
+--- a/tools/env/fw_env_main.c
++++ b/tools/env/fw_env_main.c
+@@ -38,6 +38,7 @@
+ 
+ #define	CMD_PRINTENV	"fw_printenv"
+ #define CMD_SETENV	"fw_setenv"
++#define CMD_DEFENV	"fw_defenv"
+ 
+ static struct option long_options[] = {
+ 	{"script", required_argument, NULL, 's'},
+@@ -78,10 +79,13 @@ int main(int argc, char *argv[])
+ 	char *cmdname = *argv;
+ 	char *script_file = NULL;
+ 	int c;
++#ifndef CONFIG_ARCH_ADVANTECH
+ 	const char *lockname = "/var/lock/" CMD_PRINTENV ".lock";
+ 	int lockfd = -1;
++#endif
+ 	int retval = EXIT_SUCCESS;
+ 
++#ifndef CONFIG_ARCH_ADVANTECH
+ 	lockfd = open(lockname, O_WRONLY | O_CREAT | O_TRUNC, 0666);
+ 	if (-1 == lockfd) {
+ 		fprintf(stderr, "Error opening lock file %s\n", lockname);
+@@ -93,7 +97,7 @@ int main(int argc, char *argv[])
+ 		close(lockfd);
+ 		return EXIT_FAILURE;
+ 	}
+-
++#endif
+ 	if ((p = strrchr (cmdname, '/')) != NULL) {
+ 		cmdname = p + 1;
+ 	}
+@@ -132,6 +136,9 @@ int main(int argc, char *argv[])
+ 			if (fw_parse_script(script_file) != 0)
+ 				retval = EXIT_FAILURE;
+ 		}
++	} else if (strcmp(cmdname, CMD_DEFENV) == 0) {
++		if (fw_env_default() != 0)
++			retval = EXIT_FAILURE;
+ 	} else {
+ 		fprintf(stderr,
+ 			"Identity crisis - may be called as `" CMD_PRINTENV
+@@ -141,7 +148,9 @@ int main(int argc, char *argv[])
+ 	}
+ 
+ exit:
++#ifndef CONFIG_ARCH_ADVANTECH
+ 	flock(lockfd, LOCK_UN);
+ 	close(lockfd);
++#endif
+ 	return retval;
+ }
