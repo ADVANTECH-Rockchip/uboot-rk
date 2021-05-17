@@ -33,6 +33,9 @@
 
 #include <aes.h>
 
+typedef unsigned char uint8_t;
+typedef unsigned int uint32_t;
+
 #define DIV_ROUND_UP(n, d)	(((n) + (d) - 1) / (d))
 
 #define WHITESPACE(c) ((c == '\t') || (c == ' '))
@@ -125,7 +128,7 @@ static int get_config (char *);
 #endif
 static inline ulong getenvsize (void)
 {
-	ulong rc = CUR_ENVSIZE - sizeof(long);
+	ulong rc = CUR_ENVSIZE - sizeof(int);
 
 	if (HaveRedundEnv)
 		rc -= sizeof (char);
@@ -542,6 +545,34 @@ int fw_setenv(int argc, char *argv[])
 	free(value);
 
 	return fw_env_close();
+}
+
+/**
+ * fw_env_default() - default environment
+ *
+ * Return:
+ *  0 on success, -1 on failure (modifies errno)
+ */
+int fw_env_default(void)
+{
+	if (fw_env_open()) {
+		fprintf(stderr, "Error: environment not initialized\n");
+		return -1;
+	}
+
+	/*
+	 * Clear CRC
+	 */
+	*environment.crc = 0x00;
+
+	/* write environment back to flash */
+	if (flash_io(O_RDWR)) {
+		fprintf(stderr,
+			"Error: can't write fw_env to flash\n");
+			return -1;
+	}
+
+	return 0;
 }
 
 /*

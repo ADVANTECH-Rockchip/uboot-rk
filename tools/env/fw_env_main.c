@@ -38,6 +38,7 @@
 
 #define	CMD_PRINTENV	"fw_printenv"
 #define CMD_SETENV	"fw_setenv"
+#define CMD_DEFENV	"fw_defenv"
 
 static struct option long_options[] = {
 	{"script", required_argument, NULL, 's'},
@@ -78,10 +79,13 @@ int main(int argc, char *argv[])
 	char *cmdname = *argv;
 	char *script_file = NULL;
 	int c;
+#ifndef CONFIG_ARCH_ADVANTECH
 	const char *lockname = "/var/lock/" CMD_PRINTENV ".lock";
 	int lockfd = -1;
+#endif
 	int retval = EXIT_SUCCESS;
 
+#ifndef CONFIG_ARCH_ADVANTECH
 	lockfd = open(lockname, O_WRONLY | O_CREAT | O_TRUNC, 0666);
 	if (-1 == lockfd) {
 		fprintf(stderr, "Error opening lock file %s\n", lockname);
@@ -93,7 +97,7 @@ int main(int argc, char *argv[])
 		close(lockfd);
 		return EXIT_FAILURE;
 	}
-
+#endif
 	if ((p = strrchr (cmdname, '/')) != NULL) {
 		cmdname = p + 1;
 	}
@@ -132,6 +136,9 @@ int main(int argc, char *argv[])
 			if (fw_parse_script(script_file) != 0)
 				retval = EXIT_FAILURE;
 		}
+	} else if (strcmp(cmdname, CMD_DEFENV) == 0) {
+		if (fw_env_default() != 0)
+			retval = EXIT_FAILURE;
 	} else {
 		fprintf(stderr,
 			"Identity crisis - may be called as `" CMD_PRINTENV
@@ -141,7 +148,9 @@ int main(int argc, char *argv[])
 	}
 
 exit:
+#ifndef CONFIG_ARCH_ADVANTECH
 	flock(lockfd, LOCK_UN);
 	close(lockfd);
+#endif
 	return retval;
 }
