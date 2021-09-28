@@ -89,7 +89,7 @@ int board_early_init_f(void)
 {
 #ifdef CONFIG_SWITCH_DEBUG_PORT_TO_UART
 	gpio_direction_input(DEBUG_SWITCH_GPIO);
-	if (gpio_get_value(DEBUG_SWITCH_GPIO) == DEBUG_SWITCH_GPIO_ACTIVE) {
+	if (gpio_get_value(DEBUG_SWITCH_GPIO) == DEBUG_SWITCH_GPIO_ACTIVE && IReadLoaderFlag() != BOOT_RECOVER) {
 		gd->flags |= GD_FLG_DISABLE_CONSOLE;
 		//reconfig iomux to defalt gpio
 		grf_writel((7 << 28) | (3 << 24), GRF_GPIO7CH_IOMUX);
@@ -279,7 +279,7 @@ static void board_init_adjust_env(void)
 	}
 
 #ifdef CONFIG_SWITCH_DEBUG_PORT_TO_UART
-	if (gpio_get_value(DEBUG_SWITCH_GPIO) == DEBUG_SWITCH_GPIO_ACTIVE)
+	if (gpio_get_value(DEBUG_SWITCH_GPIO) == DEBUG_SWITCH_GPIO_ACTIVE && IReadLoaderFlag() != BOOT_RECOVER)
 		setenv("switch_debug","yes");
 	else
 		setenv("switch_debug",NULL);
